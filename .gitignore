@@ -1,0 +1,7 @@
+HELAC-Onia-2.7.6/
+HepMC/
+sources/
+*.lhe
+*.root
+*.ho
+*.log

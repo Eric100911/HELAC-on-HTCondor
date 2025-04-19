@@ -1,0 +1,134 @@
+# Compulsory information
+colpar 1		# colliding particles: 1=pp, 2=ppbar, 3=e+e-
+energy_beam1 6800d0              # beam 1 energy (GeV)
+energy_beam2 6800d0              # beam 2 energy (GeV)
+alphasrun 1
+alphaem 0.0072973525205055605d0
+alphaem_elasticphoton 0.0072973525205055605d0
+qcd 2  # 0=only electroweak, 1=electroweak and QCD, 2=only QCD,3=only QED, 4=QCD and QED
+
+cmass 1.54845d0
+bmass 4.73020d0
+tmass 173d0
+taumass 1.777d0
+zmass 91.188d0
+wmass 80.419d0
+higmass 125d0
+mumass 0.1056583745d0
+emass 0.5109989461d-3
+
+# pp(bar) cuts
+cutoffp 1.0d-6         # cutoff (pp(bar) case)
+minptl 0d0          # minimum lepton pt
+minptq 0.d0            # minimum quark pt
+minptc 0.0d0          # minimum charm pt
+minptb 0.d0            # minimum bottom pt
+minptp 0d0            # minimum photon pt
+minptconia 0d0        # minimum charmonium pt
+minptbonia 0.d0        # minimum bottomnium pt
+maxrapq 30d0           # maximum quark rapidity
+maxyrapq 30d0          # maximum quark y rapidity
+minyrapq -30d0
+maxrapl   30d0          # maximum lepton rapidity
+maxyrapl  30d0          # maximum lepton y rapidity
+minyrapl -30d0           # minimum lepton y rapidity
+maxrapp   30d0           # maximum photon rapidity
+maxyrapp 100d0          # maximum photon y rapidity
+minyrapp -100d0            # minimum photon y rapidity
+maxy1c   30d0
+miny1c   -30d0
+minpt1c  0d0
+maxrapc 30d0          # maximum charm rapidity
+maxyrapc 30d0         # maximum charm y  rapidity
+minyrapc -30d0
+maxrapb 30d0           # maximum bottom rapidity
+maxyrapb 30d0          # maximum bottom y rapidity
+minyrapb -30d0
+maxrapconia 30d0         # maximum charmonium rapidity
+maxyrapconia 30d0        # maximum charmonium y rapidity
+minyrapconia -30d0         # minimum charmonium y rapidity
+maxrapbonia 30d0         # maximum bottonium rapidity
+maxyrapbonia 30d0        # maximum bottonium y rapidity
+minyrapbonia -30d0         # minimum bottonium y rapidity
+mindrll 0.d0           # minimum delta R (lepton-lepton)
+mindrlq 0.d0           # minimum delta R (lepton-quark)
+mindrqq 0.0d0          # minimum delta R (quark-quark)
+mindrqb 0.0d0          # minimum delta R (quark-b)
+mindrbb 0.0d0          # minimum delta R (b-b)
+mindrpf 0.0d0          # minimum delta R (photon-fermion)
+minmll  0.d0           # minimum mass lepton with lepton
+minmlq  0.d0           # minimum mass lepton with quark
+minmpf  0.d0           # minimum mass photon with fermion
+minmqqp 0.d0           # minimum mass quark with quark in the pp(bar) case
+minmqb  0.d0           # minimum mass quark with b in the pp(bar) case
+minmbb  0.d0           # minimum mass b with b in the pp(bar) case
+minmqbeam 0d0        # minimum mass u,d,s quarks and gluon with partonic beam in the pp(bar) case
+absoluterap F	            # absolute rap (T) or not (F), when beam1=!=beam2, it always takes as F
+
+# ee cuts
+cutoffe 1.0d-6         # cutoff (e+e- case)
+minenl 0.0d0          # minimum lepton energy
+minenq 0.0d0          # minimum quark energy
+minenp 0.0d0          # minimum photon energy
+minanglb 0.0d0         # minimum angle (degrees) between lepton and beam
+minangqb 0.0d0         # minimum angle (degrees) between quark and beam
+minangpb 0.0d0         # minimum angle (degrees) between photon and beam
+minangll 0.0d0         # minimum angle (degrees) between lepton and lepton
+minanglq 0.0d0         # minimum angle (degrees) between lepton and quark
+minangqq 0.0d0         # minimum angle (degrees) between quark and quark
+minangpf 0.0d0         # minimum angle (degrees) between photon and fermion
+minmqqe  0.0d0         # minimum mass quark with quark in the e+e- case
+minmlle  0d0         # minimum mass lepton with lepton (same flavour) in the e+e- case
+maxmqqe  -1d0          # maximum mass quark with quark in the e+e- case (-1 no such cut)
+maxmlle  0d0         # maximum mass lepton with lepton (same flavour) in the e+e- case (-1 no such cut)
+
+unwgt T                # unweighting on/off
+lhewgtup F             # xwgtup=1 (F) or not (T) in unweighted lhe file
+preunw 12000000            # n. of pre-unweighted events (should be much smaller than nmc)
+unwevt 400000000           # n. of unweighted events (in summation mode, it is the total number)
+nmc 400000000        # total number of phase space points (should be much larger than the targeted unweighted events)
+nopt 40000000        # the number of phase space points in the first step (should be = nmc/10)
+nopt_step 40000000   # the number of phase space points for each step after optimization (should be = nmc/10)
+optf 1
+maxopt 8
+noptlim 400000000   # the upper limit of phase space points (should be = nmc) 
+iopt 1
+alimit 0               # The lower limit of the alpha(i) in multichannel, 0 means no lower limitation
+nlimit 1             # The lower limit of the number of channels
+gener 0                # Monte Carlo generator: 0 PHEGAS 1 RAMBO 2 DURHAM 3 VEGAS -1 From PS.input
+ranhel 4
+pdf 10000  # 10042=cteq6l1,10000=cteq6m
+lhapdf F    # use lhapdf (only valid	when lhapdf are	installed)
+UPC_photon_flux_type  1
+grid_nchmax 3000
+Scale 4  # Sqrt(m1**2+pt1**2)
+ScaleFactor 1d0 # the factor for the scale
+FScaleValue 91.188d0
+exp3pjQ T
+topdrawer_output T     # topdrawer output file (T) or not (F)
+gnuplot_output T       # gnuplot output file (T) or not (F)
+root_output T          # root output file (T) or not (F)
+hwu_output T           # hwu output file (T) or not (F)
+reweight_Scale F
+nuclearA_beam1 0
+nuclearA_beam2 0
+nuclearZ_beam1 0
+nuclearZ_beam2 0
+emep_ISR_shower 0
+emep_ISR_PDF_type  0
+
+LDMEcc3P21 0.0179049d0
+LDMEcc3S11 0.0644444d0
+LDMEcc3S18 0.0648556d0
+LDMEcc1S01 0.0644444d0
+LDMEcc1S08 0.125d0
+LDMEcc3P01 0.0179049d0
+LDMEcc3P11 0.0179049d0
+LDMEbb3S11 1.2d0
+# For reference, here is the particle numbering:
+# ve e u d vm mu c s vt ta t  b  a  z  w+ w- g  h chi f+ f- jet
+# 1  2 3 4  5  6 7 8  9 10 11 12 31 32 33 34 35 41 42 43 44  100
+# The respective antiparticles have a minus sign (for example: positron is -2)
+# A jet in the final state is denoted by the number 100
+# Enter here your additional commands if you wish to alterate the default values
+ptdisQ F
