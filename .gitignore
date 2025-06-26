@@ -1,7 +1,13 @@
 HELAC-Onia-2.7.6/
 HepMC/
 sources/
+log/
+PROC_HO_*/
+seeds.txt
 *.lhe
 *.root
 *.ho
 *.log
+*.tar
+*.tgz
+*.tar.gz

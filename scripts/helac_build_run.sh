@@ -4,6 +4,8 @@
 # - Accept arguments: -n for new build, -s for seed.
 AS_NEW=0
 SEED=11
+WORKDIR=$(pwd)
+
 while getopts ":ns:" opt; do
     case $opt in
         n)
@@ -40,15 +42,15 @@ if ! [[ "$SEED" =~ ^[0-9]+$ ]]; then
     echo "Error: Seed must be a number."
     exit 1
 fi
-if [ "$SEED" -lt 11 ] || [ "$SEED" -gt 99 ]; then
-    echo "Error: Seed must be between 11 and 99."
+if [ "$SEED" -lt 11 ]; then
+    echo "Error: Seed must be greater than 10."
     exit 1
 fi
 
 # Check file package integrity.
 if [ ! -d "HepMC/HepMC-2.06.11" ]; then
     AS_NEW=1
-    if [ ! -f "hepmc2.06.11.tgz" ]; then
+    if [ ! -f "sources/hepmc2.06.11.tgz" ]; then
         echo "Error: No HepMC-2.06.11 available"
         exit 1
     fi
@@ -56,7 +58,7 @@ fi
 
 if [ ! -d "HELAC-Onia-2.7.6" ]; then
     AS_NEW=1
-    if [ ! -f "HELAC-Onia-2.7.6.tar.gz" ]; then
+    if [ ! -f "sources/HELAC-Onia-2.7.6.tar.gz" ]; then
         echo "Error: No HELAC-Onia-2.7.6 available"
         exit 1
     fi
@@ -67,7 +69,7 @@ if [ $AS_NEW -eq 1 ]; then
     rm -rf HepMC
     mkdir -p HepMC
     cd HepMC
-    tar -xzvf ../hepmc2.06.11.tgz
+    tar -xzvf ../sources/hepmc2.06.11.tgz
     HEPMC_DIR=$(pwd)/HepMC-2.06.11
     mkdir -p build
     mkdir -p install
@@ -89,10 +91,11 @@ export LD_LIBRARY_PATH=$HEPMC_DIR/install/lib:$LD_LIBRARY_PATH
 if [ $AS_NEW -eq 1 ]; then
     # - Remove any existing build
     rm -rf HELAC-Onia-2.7.6
-    tar -xzvf HELAC-Onia-2.7.6.tar.gz
+    tar -xzvf sources/HELAC-Onia-2.7.6.tar.gz
     # - Before compilation, apply patches
     if [ -f "patch/addon/pp_NOnia_MPS/src/pp_NOnia_MPS.f90" ]; then 
         cp patch/addon/pp_NOnia_MPS/src/pp_NOnia_MPS.f90 HELAC-Onia-2.7.6/addon/pp_NOnia_MPS/src/pp_NOnia_MPS.f90
+	    cp HELAC-Onia-2.7.6/src/RANDA_init.inc HELAC-Onia-2.7.6/addon/pp_NOnia_MPS/src/
     fi
     # - Enter directory and check that the lhapdfobj setting in pp_psiY_SPS is already blocked.
     cd HELAC-Onia-2.7.6
@@ -102,7 +105,7 @@ if [ $AS_NEW -eq 1 ]; then
     fi
 
     # - Check that the HepMC installation directory is set in input/ho_configuration.txt
-    sed -i -r -e "s|^.*hepmc_path.*$|hepmc_path = $HEPMC_DIR/install|" input/ho_configuration.txt
+    sed -i -r -e "s|^#.*hepmc_path.*$|hepmc_path = $HEPMC_DIR/install|" input/ho_configuration.txt
 
     # - Compile HELAC-Onia
     ./config
@@ -132,6 +135,12 @@ fi
 RUN_DIR=$(egrep "INFO: Results are collected in" ../run_HELAC.log | \
             sed -r -e "s,^.*(PROC_HO_[0-9]+)\/.*$,\1,g")
 
-# - Compress the output dir.
-tar -czvf $RUN_DIR.tar.gz $RUN_DIR
-mv $RUN_DIR.tar.gz ../HELAC_Onia_run_result.tar.gz
+# - Copy the resulting LHE file to the current directory.
+if [ -f "$RUN_DIR/P0_addon_pp_NOnia_MPS/output/sample_pp_nonia_mps.lhe" ]; then
+    cp "$RUN_DIR/P0_addon_pp_NOnia_MPS/output/sample_pp_nonia_mps.lhe" "$WORKDIR/sample_pp_nonia_mps.lhe"
+else
+    echo "Error: No output LHE file found in $RUN_DIR/P0_addon_pp_NOnia_MPS/output/"
+    exit 1
+fi
+
+cd "$WORKDIR"
