@@ -13,5 +13,13 @@ dryrun: condor_submit.tar condor_submit.sub seeds.txt
 seeds.txt:
 	seq 11 20 > $@
 
-condor_submit.tar: configs/* patch/* scripts/* sources/*
+condor_submit.tar: configs/* patch/* scripts/* sources/HELAC-Onia-2.7.6.tar.gz sources/hepmc2.06.11.tgz
 	tar -cvf $@ $^
+
+sources/HELAC-Onia-2.7.6.tar.gz:
+	mkdir -p sources
+	wget http://www.lpthe.jussieu.fr/~hshao/download/HELAC-Onia-2.7.6.tar.gz -O sources/HELAC-Onia-2.7.6.tar.gz
+
+sources/hepmc2.06.11.tgz:
+	mkdir -p sources
+	wget http://hepmc.web.cern.ch/hepmc/releases/hepmc2.06.11.tgz -O sources/hepmc2.06.11.tgz
