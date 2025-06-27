@@ -58,4 +58,4 @@ if [ ! -f sample_pp_nonia_mps.lhe ]; then
 fi
 
 # Move the LHE file to eos.
-cp sample_pp_nonia_mps.lhe /eos/user/c/chiw/JpsiJpsiUps/MC_samples/LHE/TPS-JpsiJpsiY/sample_pp_nonia_mps_helac_${MY_SEED}.lhe
+cp sample_pp_nonia_mps.lhe /eos/user/c/chiw/JpsiJpsiUps/MC_samples/LHE/TPS-JpsiJpsiY2S/sample_pp_nonia_mps_helac_${MY_SEED}.lhe
