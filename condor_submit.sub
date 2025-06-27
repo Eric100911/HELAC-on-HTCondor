@@ -1,6 +1,9 @@
 Universe = vanilla
 Executable = /afs/cern.ch/user/c/chiw/condor/HELAC-on-HTCondor/main.sh
 Arguments = $(seed)
+Output = log/condor_treewriter_$(Cluster)_$(Process).stdout
+Error = log/condor_treewriter_$(Cluster)_$(Process).stderr
+Log = log/condor_treewriter_$(Cluster)_$(Process).log
 Should_Transfer_Files = YES
 Transfer_Input_Files = /afs/cern.ch/user/c/chiw/condor/HELAC-on-HTCondor/condor_submit.tar, \
                        /afs/cern.ch/user/c/chiw/condor/HELAC-on-HTCondor/main.sh
@@ -10,7 +13,5 @@ request_memory = 15GB
 request_cpus = 8
 request_disk = 8G
 WhenToTransferOutput = ON_EXIT
-Output = log/condor_treewriter_$(Cluster)_$(Process).stdout
-Error = log/condor_treewriter_$(Cluster)_$(Process).stderr
-Log = log/condor_treewriter_$(Cluster)_$(Process).log
++JobFlavour = "tomorrow"
 Queue seed from /afs/cern.ch/user/c/chiw/condor/HELAC-on-HTCondor/seeds.txt
