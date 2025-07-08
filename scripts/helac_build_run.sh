@@ -124,8 +124,16 @@ if [ -f "../configs/input/py8_onia_user.inp" ]; then
     cp ../configs/input/py8_onia_user.inp input/py8_onia_user.inp
 fi
 
+if [ -f "../configs/input/user.inp" ]; then
+    cp ../configs/input/user.inp input/user.inp
+fi
+
 if [ -f "../configs/addon/pp_NOnia_MPS/input/states.inp" ]; then
     cp ../configs/addon/pp_NOnia_MPS/input/states.inp addon/pp_NOnia_MPS/input/states.inp
+fi
+
+if [ -f "../configs/addon_pp_psiY_sps/input/states.inp" ]; then
+    cp ../configs/addon_pp_psiY_sps/input/states.inp addon/pp_psiY_SPS/input/states.inp
 fi
 
 # - Run HELAC-Onia
@@ -136,10 +144,10 @@ RUN_DIR=$(egrep "INFO: Results are collected in" ../run_HELAC.log | \
             sed -r -e "s,^.*(PROC_HO_[0-9]+)\/.*$,\1,g")
 
 # - Copy the resulting LHE file to the current directory.
-if [ -f "$RUN_DIR/P0_addon_pp_NOnia_MPS/output/sample_pp_nonia_mps.lhe" ]; then
-    cp "$RUN_DIR/P0_addon_pp_NOnia_MPS/output/sample_pp_nonia_mps.lhe" "$WORKDIR/sample_pp_nonia_mps.lhe"
+if [ -f "$RUN_DIR/P0_addon_pp_psiY_SPS/output/sample_pp_psiY_sps.lhe" ]; then
+    cp "$RUN_DIR/P0_addon_pp_psiY_SPS/output/sample_pp_psiY_sps.lhe" "$WORKDIR/helac_sample.lhe"
 else
-    echo "Error: No output LHE file found in $RUN_DIR/P0_addon_pp_NOnia_MPS/output/"
+    echo "Error: No output LHE file found in $RUN_DIR"
     exit 1
 fi
 

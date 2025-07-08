@@ -1,15 +1,19 @@
 set cmass = 1.54845d0
 set bmass = 5.0117d0
-set preunw = 3000000
-set unwevt = 1000000000
-set nmc = 200000000
-set nopt = 20000000
-set nopt_step = 20000000
-set noptlim = 200000000
+set preunw = 36000
+set unwevt = 10000000
+set nmc = 2000000
+set nopt = 200000
+set nopt_step = 200000
+set noptlim = 2000000
 set seed = MY_SEED
 set parton_shower = 0
-set minptconia 2.0d0
-set minptbonia 2.0d0
-generate addon 11
+set minptconia = 2.0d0
+set minptbonia = 2.0d0
+set minyrapconia = -3.0d0
+set maxyrapconia = 3.0d0
+set minyrapbonia = -3.0d0
+set maxyrapbonia = 3.0d0
+generate addon 8
 launch
 exit
