@@ -144,8 +144,8 @@ RUN_DIR=$(egrep "INFO: Results are collected in" ../run_HELAC.log | \
             sed -r -e "s,^.*(PROC_HO_[0-9]+)\/.*$,\1,g")
 
 # - Copy the resulting LHE file to the current directory.
-if [ -f "$RUN_DIR/P0_addon_pp_psiY_SPS/output/sample_pp_psiY_sps.lhe" ]; then
-    cp "$RUN_DIR/P0_addon_pp_psiY_SPS/output/sample_pp_psiY_sps.lhe" "$WORKDIR/helac_sample.lhe"
+if [ -f "$RUN_DIR/results/results.lhe" ]; then
+    cp "$RUN_DIR/results/results.lhe" "$WORKDIR/helac_sample.lhe"
 else
     echo "Error: No output LHE file found in $RUN_DIR"
     exit 1

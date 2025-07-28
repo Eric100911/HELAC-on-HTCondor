@@ -8,12 +8,12 @@ set nopt_step = 200000
 set noptlim = 2000000
 set seed = MY_SEED
 set parton_shower = 0
-set minptconia = 2.0d0
-set minptbonia = 2.0d0
+set minptconia = 4.0d0
+set minptbonia = 4.0d0
 set minyrapconia = -3.0d0
 set maxyrapconia = 3.0d0
 set minyrapbonia = -3.0d0
 set maxyrapbonia = 3.0d0
-generate addon 8
+generate g g > cc~(3S11)  cc~(3S11)
 launch
 exit

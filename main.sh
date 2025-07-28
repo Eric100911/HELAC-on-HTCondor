@@ -58,4 +58,4 @@ if [ ! -f helac_sample.lhe ]; then
 fi
 
 # Move the LHE file to eos.
-cp helac_sample.lhe /eos/user/c/chiw/JpsiJpsiUps/MC_samples/LHE/SPS-JpsiY/helac_sample_${MY_SEED}.lhe
+cp helac_sample.lhe /eos/user/c/chiw/JpsiJpsiUps/MC_samples/LHE/SPS-JpsiJpsi/helac_sample_${MY_SEED}.lhe
