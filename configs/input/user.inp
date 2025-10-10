@@ -25,7 +25,7 @@ minptc 0.0d0          # minimum charm pt
 minptb 0.d0            # minimum bottom pt
 minptp 0d0            # minimum photon pt
 minptconia 4.0d0        # minimum charmonium pt
-minptbonia 4.0d0        # minimum bottomnium pt
+minptbonia 6.0d0        # minimum bottomnium pt
 maxrapq 30d0           # maximum quark rapidity
 maxyrapq 30d0          # maximum quark y rapidity
 minyrapq -30d0

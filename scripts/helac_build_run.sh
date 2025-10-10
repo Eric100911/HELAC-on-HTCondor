@@ -128,6 +128,10 @@ if [ -f "../configs/addon/pp_NOnia_MPS/input/states.inp" ]; then
     cp ../configs/addon/pp_NOnia_MPS/input/states.inp addon/pp_NOnia_MPS/input/states.inp
 fi
 
+if [ -f "../configs/addon/pp_psiX_CrystalBall/input/states.inp" ]; then
+    cp ../configs/addon/pp_psiX_CrystalBall/input/states.inp addon/pp_psiX_CrystalBall/input/states.inp
+fi
+
 # - Run HELAC-Onia
 ./ho_cluster < ../configs/run_HELAC.ho | tee ../run_HELAC.log
 
