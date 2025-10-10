@@ -136,10 +136,10 @@ RUN_DIR=$(egrep "INFO: Results are collected in" ../run_HELAC.log | \
             sed -r -e "s,^.*(PROC_HO_[0-9]+)\/.*$,\1,g")
 
 # - Copy the resulting LHE file to the current directory.
-if [ -f "$RUN_DIR/P0_addon_pp_NOnia_MPS/output/sample_pp_nonia_mps.lhe" ]; then
-    cp "$RUN_DIR/P0_addon_pp_NOnia_MPS/output/sample_pp_nonia_mps.lhe" "$WORKDIR/sample_pp_nonia_mps.lhe"
+if [ -f "$RUN_DIR/P0_addon_pp_psiX_CrystalBall/output/sample_pp_psiX_crystalball.lhe" ]; then
+    cp "$RUN_DIR/P0_addon_pp_psiX_CrystalBall/output/sample_pp_psiX_crystalball.lhe" "$WORKDIR/result.lhe"
 else
-    echo "Error: No output LHE file found in $RUN_DIR/P0_addon_pp_NOnia_MPS/output/"
+    echo "Error: No output LHE file found in $RUN_DIR/P0_addon_pp_psiX_CrystalBall/output/"
     exit 1
 fi
 

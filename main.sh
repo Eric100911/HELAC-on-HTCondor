@@ -52,10 +52,10 @@ fi
 cmssw-el7 --command-to-run "source scripts/helac_build_run.sh -s $MY_SEED"
 
 # Check if the LHE file was created.
-if [ ! -f sample_pp_nonia_mps.lhe ]; then
-    echo "Error: LHE file sample_pp_nonia_mps.lhe not found."
+if [ ! -f result.lhe ]; then
+    echo "Error: LHE file result.lhe not found."
     exit 1
 fi
 
 # Move the LHE file to eos.
-cp sample_pp_nonia_mps.lhe /eos/user/c/chiw/JpsiJpsiUps/MC_samples/LHE/TPS-JpsiJpsiY2S/sample_pp_nonia_mps_helac_${MY_SEED}.lhe
+cp result.lhe /eos/user/c/chiw/JpsiJpsiUps/MC_samples/LHE/SPS-Jpsi/filter_JpsiPtMin4p0/helac_${MY_SEED}.lhe
