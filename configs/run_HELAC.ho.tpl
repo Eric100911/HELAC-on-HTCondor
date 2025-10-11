@@ -8,6 +8,10 @@ set nopt_step = 20000000
 set noptlim = 200000000
 set minptconia = 4.0d0
 set minptbonia = 6.0d0
+set minyrapconia = -3.0d0
+set maxyrapconia = 3.0d0
+set minyrapbonia = -3.0d0
+set maxyrapbonia = 3.0d0
 set seed = MY_SEED
 set parton_shower = 0
 generate addon 2

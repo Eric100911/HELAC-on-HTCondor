@@ -58,4 +58,4 @@ if [ ! -f result.lhe ]; then
 fi
 
 # Move the LHE file to eos.
-cp result.lhe /eos/user/c/chiw/JpsiJpsiUps/MC_samples/LHE/SPS-Y/filter_PtMin6p0/helac_${MY_SEED}.lhe
+cp result.lhe /eos/user/c/chiw/JpsiJpsiUps/MC_samples/LHE/SPS-Y/filter_PtMin6p0/SPS_Y_HO_PtMin6p0_YAbsMin3p0_${MY_SEED}.lhe
