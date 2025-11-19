@@ -5,11 +5,19 @@
 AS_NEW=0
 SEED=11
 WORKDIR=$(pwd)
+DRYRUN=0
+HEPMC_DIR=/cvmfs/cms.cern.ch/slc7_amd64_gcc620/external/hepmc/2.06.07
+PYTHIA_INSTALL_PATH=/cvmfs/cms.cern.ch/slc7_amd64_gcc620/external/pythia8/223
+LIBBOOST_A=/cvmfs/sft.cern.ch/lcg/releases/LCG_88b/Boost/1.62.0/x86_64-centos7-gcc62-opt/lib/libboost_iostreams-gcc62-mt-1_62.a
+LIBBOOST_SO=/cvmfs/sft.cern.ch/lcg/releases/LCG_88b/Boost/1.62.0/x86_64-centos7-gcc62-opt/lib/libboost_iostreams-gcc62-mt-1_62.so
 
-while getopts ":ns:" opt; do
+while getopts ":ndsf:" opt; do
     case $opt in
         n)
             AS_NEW=1
+            ;;
+        d)
+            DRYRUN=1
             ;;
         s)
             SEED=$OPTARG
@@ -47,15 +55,6 @@ if [ "$SEED" -lt 11 ]; then
     exit 1
 fi
 
-# Check file package integrity.
-if [ ! -d "HepMC/HepMC-2.06.11" ]; then
-    AS_NEW=1
-    if [ ! -f "sources/hepmc2.06.11.tgz" ]; then
-        echo "Error: No HepMC-2.06.11 available"
-        exit 1
-    fi
-fi
-
 if [ ! -d "HELAC-Onia-2.7.6" ]; then
     AS_NEW=1
     if [ ! -f "sources/HELAC-Onia-2.7.6.tar.gz" ]; then
@@ -64,28 +63,15 @@ if [ ! -d "HELAC-Onia-2.7.6" ]; then
     fi
 fi
 
-# Build HepMC
-if [ $AS_NEW -eq 1 ]; then
-    rm -rf HepMC
-    mkdir -p HepMC
-    cd HepMC
-    tar -xzvf ../sources/hepmc2.06.11.tgz
-    HEPMC_DIR=$(pwd)/HepMC-2.06.11
-    mkdir -p build
-    mkdir -p install
-    cd build
-    $HEPMC_DIR/configure --prefix=$HEPMC_DIR/install --with-momentum=GEV --with-length=MM
-    make
-    make check
-    make install
-    cd ../../
-else
-    echo "Using existing HepMC build"
-fi
-
 # With HepMC installed, we can set the environment variables for the rest of the script.
-export PATH=$HEPMC_DIR/install:$PATH
-export LD_LIBRARY_PATH=$HEPMC_DIR/install/lib:$LD_LIBRARY_PATH
+export PATH=$HEPMC_DIR:$PATH
+export LD_LIBRARY_PATH=$HEPMC_DIR/lib:$LD_LIBRARY_PATH
+
+# For Pythia 8 to correctly locate some libboost_iostream files, create a soft link.
+mkdir -p lib_links
+ln -s $LIBBOOST_A lib_links/libboost_iostreams.a
+ln -s $LIBBOOST_SO lib_links/libboost_iostreams.so
+export LD_LIBRARY_PATH=$(pwd)/lib_links:$LD_LIBRARY_PATH
 
 # Build HELAC-Onia.
 if [ $AS_NEW -eq 1 ]; then
@@ -105,10 +91,18 @@ if [ $AS_NEW -eq 1 ]; then
     fi
 
     # - Check that the HepMC installation directory is set in input/ho_configuration.txt
-    sed -i -r -e "s|^#.*hepmc_path.*$|hepmc_path = $HEPMC_DIR/install|" input/ho_configuration.txt
+    sed -i -r -e "s|^# hepmc_path.*$|hepmc_path = $HEPMC_DIR|" input/ho_configuration.txt
+
+    # - Connect Pythia 8 installation also
+    sed -i -r -e "s|^# pythia8_path.*$|pythia8_path = $PYTHIA_INSTALL_PATH|" input/ho_configuration.txt
 
     # - Compile HELAC-Onia
-    ./config
+    if [[ $DRYRUN -eq 0 ]]; then
+        ./config
+    else
+        echo "Dryrun mode: HELAC-Onia build command:"
+        echo "./config"
+    fi
 else
     echo "Using existing HELAC-Onia build"
     cd HELAC-Onia-2.7.6
@@ -136,19 +130,27 @@ if [ -f "../configs/addon_pp_psiY_sps/input/states.inp" ]; then
     cp ../configs/addon_pp_psiY_sps/input/states.inp addon/pp_psiY_SPS/input/states.inp
 fi
 
+# - Dryrun: print out the final configuration and exit
+if [ $DRYRUN -eq 1 ]; then
+    echo "Dryrun mode: Final HELAC-Onia configuration (run_HELAC.ho):"
+    cat ../configs/run_HELAC.ho
+    echo "input/configuration.txt:"
+    cat input/ho_configuration.txt
+    exit 0
+fi
+
 # - Run HELAC-Onia
 ./ho_cluster < ../configs/run_HELAC.ho | tee ../run_HELAC.log
 
-# Collect output and input info from the run.
+# Redo showering with updated parameters.
 RUN_DIR=$(egrep "INFO: Results are collected in" ../run_HELAC.log | \
             sed -r -e "s,^.*(PROC_HO_[0-9]+)\/.*$,\1,g")
 
-# - Copy the resulting LHE file to the current directory.
-if [ -f "$RUN_DIR/results/results.lhe" ]; then
-    cp "$RUN_DIR/results/results.lhe" "$WORKDIR/helac_sample.lhe"
-else
-    echo "Error: No output LHE file found in $RUN_DIR"
-    exit 1
-fi
+cp ../configs/shower/HO_PYTHIA8_0/Pythia8_lhe.cmnd $RUN_DIR/P0_calc_0/shower/HO_PYTHIA8_0/Pythia8_lhe.cmnd
+cd $RUN_DIR/P0_calc_0/shower/HO_PYTHIA8_0/
+./Pythia8.exe
+
+# - Retrieve output HepMC file
+cp Pythia8_lhe.hep $WORKDIR/test_Jpsi1Jpsi1Y8.dat
 
 cd "$WORKDIR"

@@ -51,11 +51,12 @@ fi
 # Load the cmssw-el7 container and run.
 cmssw-el7 --command-to-run "source scripts/helac_build_run.sh -s $MY_SEED"
 
-# Check if the LHE file was created.
-if [ ! -f helac_sample.lhe ]; then
-    echo "Error: LHE file helac_sample.lhe not found."
+# Check if the HepMC file was created.
+if [ ! -f test_Jpsi1Jpsi1Y8.dat ]; then
+    echo "Error: HepMC file test_Jpsi1Jpsi1Y8.dat not found."
     exit 1
 fi
 
-# Move the LHE file to eos.
-cp helac_sample.lhe /eos/user/c/chiw/JpsiJpsiUps/MC_samples/LHE/SPS-JpsiJpsi/helac_sample_${MY_SEED}.lhe
+echo "HELAC-Onia run completed successfully with seed $MY_SEED."
+echo "Output HepMC file: test_Jpsi1Jpsi1Y8.dat"
+echo "Begin CMS simulation steps..."
