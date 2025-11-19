@@ -59,4 +59,21 @@ fi
 
 echo "HELAC-Onia run completed successfully with seed $MY_SEED."
 echo "Output HepMC file: test_Jpsi1Jpsi1Y8.dat"
-echo "Begin CMS simulation steps..."
+echo "Begin CMS simulation steps to GENSIM..."
+
+# Set up CMSSW environment
+scram project -n CMSSW_12_4_14_patch3 CMSSW_12_4_14_patch3
+cd CMSSW_12_4_14_patch3/src
+eval `scram runtime -sh`
+cp ../../scripts/step1_Jpsi1Jpsi1Y8_cfg.py .
+mv ../test_Jpsi1Jpsi1Y8.dat .
+# Run CMS simulation step to GENSIM
+cmsRun step1_Jpsi1Jpsi1Y8_cfg.py
+echo "GENSIM step completed. Output file: JJY1S_Y1S-Octet_SPS_6Mu_13p6TeV_TuneCP5_pythia8_Run3Summer22_GENSIM.root"
+
+# Transfer the GENSIM output file back to the output directory
+cp JJY1S_Y1S-Octet_SPS_6Mu_13p6TeV_TuneCP5_pythia8_Run3Summer22_GENSIM.root \
+    /eos/user/c/chiw/JpsiJpsiUps/MC_samples/GENSIM/SPS-JpsiJpsiY-bb3S18/JJY1S_Y1S-Octet_SPS_6Mu_13p6TeV_TuneCP5_pythia8_Run3Summer22_GENSIM_${MY_SEED}.root
+
+cd ../../
+echo "All steps completed successfully."
