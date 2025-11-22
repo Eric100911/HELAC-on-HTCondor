@@ -49,7 +49,7 @@ if [ ! -f scripts/helac_build_run.sh ]; then
 fi
 
 # Load the cmssw-el7 container and run.
-cmssw-el7 --command-to-run "source scripts/helac_build_run.sh -s $MY_SEED"
+cmssw-el7 --command-to-run "bash -x scripts/helac_build_run.sh -s $MY_SEED"
 
 # Check if the HepMC file was created.
 if [ ! -f test_Jpsi1Jpsi1Y8.dat ]; then
@@ -66,7 +66,7 @@ scram project -n CMSSW_12_4_14_patch3 CMSSW_12_4_14_patch3
 cd CMSSW_12_4_14_patch3/src
 eval `scram runtime -sh`
 cp ../../scripts/step1_Jpsi1Jpsi1Y8_cfg.py .
-mv ../test_Jpsi1Jpsi1Y8.dat .
+mv ../../test_Jpsi1Jpsi1Y8.dat .
 # Run CMS simulation step to GENSIM
 cmsRun step1_Jpsi1Jpsi1Y8_cfg.py
 echo "GENSIM step completed. Output file: JJY1S_Y1S-Octet_SPS_6Mu_13p6TeV_TuneCP5_pythia8_Run3Summer22_GENSIM.root"

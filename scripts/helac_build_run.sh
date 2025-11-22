@@ -11,7 +11,7 @@ PYTHIA_INSTALL_PATH=/cvmfs/cms.cern.ch/slc7_amd64_gcc620/external/pythia8/223
 LIBBOOST_A=/cvmfs/sft.cern.ch/lcg/releases/LCG_88b/Boost/1.62.0/x86_64-centos7-gcc62-opt/lib/libboost_iostreams-gcc62-mt-1_62.a
 LIBBOOST_SO=/cvmfs/sft.cern.ch/lcg/releases/LCG_88b/Boost/1.62.0/x86_64-centos7-gcc62-opt/lib/libboost_iostreams-gcc62-mt-1_62.so
 
-while getopts ":ndsf:" opt; do
+while getopts ":nds:" opt; do
     case $opt in
         n)
             AS_NEW=1
@@ -20,7 +20,7 @@ while getopts ":ndsf:" opt; do
             DRYRUN=1
             ;;
         s)
-            SEED=$OPTARG
+            SEED="$OPTARG"
             ;;
         \?)
             echo "Invalid option: -$OPTARG" >&2
@@ -32,14 +32,6 @@ while getopts ":ndsf:" opt; do
             ;;
     esac
 done
-
-# Environment variables for the first part of the script.
-source ~/.bash_profile
-source /cvmfs/cms.cern.ch/cmsset_default.sh
-source /cvmfs/sft.cern.ch/lcg/views/LCG_88b/x86_64-centos7-gcc62-opt/setup.sh
-export LD_LIBRARY_PATH=/cvmfs/sft.cern.ch/lcg/releases/LCG_88b/Boost/1.62.0/x86_64-centos7-gcc62-opt/lib:$LD_LIBRARY_PATH
-export LD_LIBRARY_PATH=/cvmfs/sft.cern.ch/lcg/contrib/gcc/6.2.0/x86_64-centos7-gcc62-opt/lib64:/opt/rh/gcc-toolset-12/root/usr/lib64:$LD_LIBRARY_PATH
-export LD_LIBRARY_PATH=/cvmfs/sft.cern.ch/lcg/releases/LCG_88b/Boost/1.62.0/x86_64-centos7-gcc62-opt/lib:$LD_LIBRARY_PATH
 
 # Check if the seed is provided and valid.
 if [ -z "$SEED" ]; then
@@ -62,6 +54,14 @@ if [ ! -d "HELAC-Onia-2.7.6" ]; then
         exit 1
     fi
 fi
+
+# Environment variables for the first part of the script.
+source ~/.bash_profile
+source /cvmfs/cms.cern.ch/cmsset_default.sh
+source /cvmfs/sft.cern.ch/lcg/views/LCG_88b/x86_64-centos7-gcc62-opt/setup.sh
+export LD_LIBRARY_PATH=/cvmfs/sft.cern.ch/lcg/releases/LCG_88b/Boost/1.62.0/x86_64-centos7-gcc62-opt/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/cvmfs/sft.cern.ch/lcg/contrib/gcc/6.2.0/x86_64-centos7-gcc62-opt/lib64:/opt/rh/gcc-toolset-12/root/usr/lib64:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/cvmfs/sft.cern.ch/lcg/releases/LCG_88b/Boost/1.62.0/x86_64-centos7-gcc62-opt/lib:$LD_LIBRARY_PATH
 
 # With HepMC installed, we can set the environment variables for the rest of the script.
 export PATH=$HEPMC_DIR:$PATH
