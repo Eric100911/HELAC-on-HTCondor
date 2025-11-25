@@ -6,10 +6,10 @@ AS_NEW=0
 SEED=11
 WORKDIR=$(pwd)
 DRYRUN=0
-HEPMC_DIR=/cvmfs/cms.cern.ch/slc7_amd64_gcc620/external/hepmc/2.06.07
-PYTHIA_INSTALL_PATH=/cvmfs/cms.cern.ch/slc7_amd64_gcc620/external/pythia8/223
-LIBBOOST_A=/cvmfs/sft.cern.ch/lcg/releases/LCG_88b/Boost/1.62.0/x86_64-centos7-gcc62-opt/lib/libboost_iostreams-gcc62-mt-1_62.a
-LIBBOOST_SO=/cvmfs/sft.cern.ch/lcg/releases/LCG_88b/Boost/1.62.0/x86_64-centos7-gcc62-opt/lib/libboost_iostreams-gcc62-mt-1_62.so
+HEPMC_DIR=/afs/cern.ch/user/c/chiw/public/cms-utils/HepMC-2.06.11/install
+PYTHIA_INSTALL_PATH=/afs/cern.ch/user/c/chiw/public/cms-utils/pythia8245
+MY_LIBBOOST_A=/cvmfs/sft.cern.ch/lcg/releases/LCG_88b/Boost/1.62.0/x86_64-centos7-gcc62-opt/lib/libboost_iostreams-gcc62-mt-1_62.a
+MY_LIBBOOST_SO=/cvmfs/sft.cern.ch/lcg/releases/LCG_88b/Boost/1.62.0/x86_64-centos7-gcc62-opt/lib/libboost_iostreams-gcc62-mt-1_62.so
 
 while getopts ":nds:" opt; do
     case $opt in
@@ -68,10 +68,8 @@ export PATH=$HEPMC_DIR:$PATH
 export LD_LIBRARY_PATH=$HEPMC_DIR/lib:$LD_LIBRARY_PATH
 
 # For Pythia 8 to correctly locate some libboost_iostream files, create a soft link.
-mkdir -p lib_links
-ln -s $LIBBOOST_A lib_links/libboost_iostreams.a
-ln -s $LIBBOOST_SO lib_links/libboost_iostreams.so
-export LD_LIBRARY_PATH=$(pwd)/lib_links:$LD_LIBRARY_PATH
+ln -s $MY_LIBBOOST_A $HEPMC_DIR/lib/libboost_iostreams.a
+ln -s $MY_LIBBOOST_SO $HEPMC_DIR/lib/libboost_iostreams.so
 
 # Build HELAC-Onia.
 if [ $AS_NEW -eq 1 ]; then

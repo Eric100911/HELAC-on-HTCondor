@@ -11,6 +11,7 @@ dryrun: condor_submit.tar condor_submit.sub seeds.txt main.sh
 	condor_submit condor_submit.sub -dry-run dryrun.log
 
 local: condor_submit.tar condor_submit.sub main.sh
+	rm -rf local/
 	mkdir -p local
 	cp condor_submit.tar local/
 	cp condor_submit.sub local/

@@ -62,6 +62,7 @@ echo "Output HepMC file: test_Jpsi1Jpsi1Y8.dat"
 echo "Begin CMS simulation steps to GENSIM..."
 
 # Set up CMSSW environment
+export SCRAM_ARCH=el8_amd64_gcc10
 scram project -n CMSSW_12_4_14_patch3 CMSSW_12_4_14_patch3
 cd CMSSW_12_4_14_patch3/src
 eval `scram runtime -sh`
