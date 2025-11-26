@@ -144,7 +144,11 @@ fi
 RUN_DIR=$(egrep "INFO: Results are collected in" ../run_HELAC.log | \
             sed -r -e "s,^.*(PROC_HO_[0-9]+)\/.*$,\1,g")
 
-cp ../configs/shower/HO_PYTHIA8_0/Pythia8_lhe.cmnd $RUN_DIR/P0_calc_0/shower/HO_PYTHIA8_0/Pythia8_lhe.cmnd
+if [ -f "../configs/shower/HO_PYTHIA8_0/Pythia8_lhe.cmnd.patch" ]; then
+    cat ../configs/shower/HO_PYTHIA8_0/Pythia8_lhe.cmnd.patch \
+        >> $RUN_DIR/P0_calc_0/shower/HO_PYTHIA8_0/Pythia8_lhe.cmnd
+fi
+
 cd $RUN_DIR/P0_calc_0/shower/HO_PYTHIA8_0/
 ./Pythia8.exe
 
