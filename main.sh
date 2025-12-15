@@ -49,13 +49,32 @@ if [ ! -f scripts/helac_build_run.sh ]; then
 fi
 
 # Load the cmssw-el7 container and run.
-cmssw-el7 --command-to-run "source scripts/helac_build_run.sh -s $MY_SEED"
+cmssw-el7 --command-to-run "bash -x scripts/helac_build_run.sh -s $MY_SEED"
 
 # Check if the LHE file was created.
-if [ ! -f helac_sample.lhe ]; then
-    echo "Error: LHE file helac_sample.lhe not found."
+if [ ! -f ./test_Jpsi1Jpsi1Y8.dat ]; then
+    echo "Error: HepMC file test_Jpsi1Jpsi1Y8.dat not found."
     exit 1
 fi
 
-# Move the LHE file to eos.
-cp helac_sample.lhe /eos/user/c/chiw/JpsiJpsiUps/MC_samples/LHE/SPS-JpsiJpsi/helac_sample_${MY_SEED}.lhe
+echo "HELAC-Onia run completed successfully with seed $MY_SEED."
+echo "Output HepMC file: test_Jpsi1Jpsi1Y8.dat"
+echo "Begin CMS simulation steps to GENSIM..."
+
+# Set up CMSSW environment
+export SCRAM_ARCH=el8_amd64_gcc10
+scram project -n CMSSW_12_4_14_patch3 CMSSW_12_4_14_patch3
+cd CMSSW_12_4_14_patch3/src
+eval `scram runtime -sh`
+cp ../../scripts/step1_Jpsi1Jpsi1Y8_cfg.py .
+mv ../../test_Jpsi1Jpsi1Y8.dat .
+# Run CMS simulation step to GENSIM
+cmsRun step1_Jpsi1Jpsi1Y8_cfg.py
+echo "GENSIM step completed. Output file: JJY1S_Y1S-Octet_SPS_6Mu_13p6TeV_TuneCP5_pythia8_Run3Summer22_GENSIM.root"
+
+# Transfer the GENSIM output file back to the output directory
+cp JJY1S_Y1S-Octet_SPS_6Mu_13p6TeV_TuneCP5_pythia8_Run3Summer22_GENSIM.root \
+    /eos/user/c/chiw/JpsiJpsiPhi/MC_samples/GENSIM/DPS-JpsiJpsi-Phi/filter_JPsi_PtMin6p0_Phi_PtMin6p0/DPS-JpsiJpsi-Phi1020_JJPhi_4Mu2K_13p6TeV_TuneCP5_pythia8_Run3Summer22_GENSIM_${MY_SEED}.root
+
+cd ../../
+echo "All steps completed successfully."

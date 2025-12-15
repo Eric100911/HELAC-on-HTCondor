@@ -5,14 +5,22 @@
 AS_NEW=0
 SEED=11
 WORKDIR=$(pwd)
+DRYRUN=0
+HEPMC_DIR=/afs/cern.ch/user/c/chiw/public/cms-utils/HepMC-2.06.11/install
+PYTHIA_INSTALL_PATH=/afs/cern.ch/user/c/chiw/public/cms-utils/pythia8245
+MY_LIBBOOST_A=/cvmfs/sft.cern.ch/lcg/releases/LCG_88b/Boost/1.62.0/x86_64-centos7-gcc62-opt/lib/libboost_iostreams-gcc62-mt-1_62.a
+MY_LIBBOOST_SO=/cvmfs/sft.cern.ch/lcg/releases/LCG_88b/Boost/1.62.0/x86_64-centos7-gcc62-opt/lib/libboost_iostreams-gcc62-mt-1_62.so
 
-while getopts ":ns:" opt; do
+while getopts ":nds:" opt; do
     case $opt in
         n)
             AS_NEW=1
             ;;
+        d)
+            DRYRUN=1
+            ;;
         s)
-            SEED=$OPTARG
+            SEED="$OPTARG"
             ;;
         \?)
             echo "Invalid option: -$OPTARG" >&2
@@ -24,14 +32,6 @@ while getopts ":ns:" opt; do
             ;;
     esac
 done
-
-# Environment variables for the first part of the script.
-source ~/.bash_profile
-source /cvmfs/cms.cern.ch/cmsset_default.sh
-source /cvmfs/sft.cern.ch/lcg/views/LCG_88b/x86_64-centos7-gcc62-opt/setup.sh
-export LD_LIBRARY_PATH=/cvmfs/sft.cern.ch/lcg/releases/LCG_88b/Boost/1.62.0/x86_64-centos7-gcc62-opt/lib:$LD_LIBRARY_PATH
-export LD_LIBRARY_PATH=/cvmfs/sft.cern.ch/lcg/contrib/gcc/6.2.0/x86_64-centos7-gcc62-opt/lib64:/opt/rh/gcc-toolset-12/root/usr/lib64:$LD_LIBRARY_PATH
-export LD_LIBRARY_PATH=/cvmfs/sft.cern.ch/lcg/releases/LCG_88b/Boost/1.62.0/x86_64-centos7-gcc62-opt/lib:$LD_LIBRARY_PATH
 
 # Check if the seed is provided and valid.
 if [ -z "$SEED" ]; then
@@ -47,15 +47,6 @@ if [ "$SEED" -lt 11 ]; then
     exit 1
 fi
 
-# Check file package integrity.
-if [ ! -d "HepMC/HepMC-2.06.11" ]; then
-    AS_NEW=1
-    if [ ! -f "sources/hepmc2.06.11.tgz" ]; then
-        echo "Error: No HepMC-2.06.11 available"
-        exit 1
-    fi
-fi
-
 if [ ! -d "HELAC-Onia-2.7.6" ]; then
     AS_NEW=1
     if [ ! -f "sources/HELAC-Onia-2.7.6.tar.gz" ]; then
@@ -64,28 +55,21 @@ if [ ! -d "HELAC-Onia-2.7.6" ]; then
     fi
 fi
 
-# Build HepMC
-if [ $AS_NEW -eq 1 ]; then
-    rm -rf HepMC
-    mkdir -p HepMC
-    cd HepMC
-    tar -xzvf ../sources/hepmc2.06.11.tgz
-    HEPMC_DIR=$(pwd)/HepMC-2.06.11
-    mkdir -p build
-    mkdir -p install
-    cd build
-    $HEPMC_DIR/configure --prefix=$HEPMC_DIR/install --with-momentum=GEV --with-length=MM
-    make
-    make check
-    make install
-    cd ../../
-else
-    echo "Using existing HepMC build"
-fi
+# Environment variables for the first part of the script.
+source ~/.bash_profile
+source /cvmfs/cms.cern.ch/cmsset_default.sh
+source /cvmfs/sft.cern.ch/lcg/views/LCG_88b/x86_64-centos7-gcc62-opt/setup.sh
+export LD_LIBRARY_PATH=/cvmfs/sft.cern.ch/lcg/releases/LCG_88b/Boost/1.62.0/x86_64-centos7-gcc62-opt/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/cvmfs/sft.cern.ch/lcg/contrib/gcc/6.2.0/x86_64-centos7-gcc62-opt/lib64:/opt/rh/gcc-toolset-12/root/usr/lib64:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/cvmfs/sft.cern.ch/lcg/releases/LCG_88b/Boost/1.62.0/x86_64-centos7-gcc62-opt/lib:$LD_LIBRARY_PATH
 
 # With HepMC installed, we can set the environment variables for the rest of the script.
-export PATH=$HEPMC_DIR/install:$PATH
-export LD_LIBRARY_PATH=$HEPMC_DIR/install/lib:$LD_LIBRARY_PATH
+export PATH=$HEPMC_DIR:$PATH
+export LD_LIBRARY_PATH=$HEPMC_DIR/lib:$LD_LIBRARY_PATH
+
+# For Pythia 8 to correctly locate some libboost_iostream files, create a soft link.
+ln -s $MY_LIBBOOST_A $HEPMC_DIR/lib/libboost_iostreams.a
+ln -s $MY_LIBBOOST_SO $HEPMC_DIR/lib/libboost_iostreams.so
 
 # Build HELAC-Onia.
 if [ $AS_NEW -eq 1 ]; then
@@ -105,10 +89,18 @@ if [ $AS_NEW -eq 1 ]; then
     fi
 
     # - Check that the HepMC installation directory is set in input/ho_configuration.txt
-    sed -i -r -e "s|^#.*hepmc_path.*$|hepmc_path = $HEPMC_DIR/install|" input/ho_configuration.txt
+    sed -i -r -e "s|^# hepmc_path.*$|hepmc_path = $HEPMC_DIR|" input/ho_configuration.txt
+
+    # - Connect Pythia 8 installation also
+    sed -i -r -e "s|^# pythia8_path.*$|pythia8_path = $PYTHIA_INSTALL_PATH|" input/ho_configuration.txt
 
     # - Compile HELAC-Onia
-    ./config
+    if [[ $DRYRUN -eq 0 ]]; then
+        ./config
+    else
+        echo "Dryrun mode: HELAC-Onia build command:"
+        echo "./config"
+    fi
 else
     echo "Using existing HELAC-Onia build"
     cd HELAC-Onia-2.7.6
@@ -132,8 +124,9 @@ if [ -f "../configs/addon/pp_NOnia_MPS/input/states.inp" ]; then
     cp ../configs/addon/pp_NOnia_MPS/input/states.inp addon/pp_NOnia_MPS/input/states.inp
 fi
 
-if [ -f "../configs/addon_pp_psiY_sps/input/states.inp" ]; then
-    cp ../configs/addon_pp_psiY_sps/input/states.inp addon/pp_psiY_SPS/input/states.inp
+
+if [ -f "../configs/addon/pp_psiY_sps/input/states.inp" ]; then
+    cp ../configs/addon/pp_psiY_sps/input/states.inp addon/pp_psiY_SPS/input/states.inp
 fi
 
 # - Run HELAC-Onia
@@ -144,11 +137,37 @@ RUN_DIR=$(egrep "INFO: Results are collected in" ../run_HELAC.log | \
             sed -r -e "s,^.*(PROC_HO_[0-9]+)\/.*$,\1,g")
 
 # - Copy the resulting LHE file to the current directory.
-if [ -f "$RUN_DIR/results/results.lhe" ]; then
-    cp "$RUN_DIR/results/results.lhe" "$WORKDIR/helac_sample.lhe"
+if [ -f "$RUN_DIR/P0_addon_pp_psiY_SPS/output/sample_pp_psiY_sps.lhe" ]; then
+    cp "$RUN_DIR/P0_addon_pp_psiY_SPS/output/sample_pp_psiY_sps.lhe" "$WORKDIR/helac_sample.lhe"
 else
     echo "Error: No output LHE file found in $RUN_DIR"
     exit 1
 fi
 
 cd "$WORKDIR"
+
+# Build Pythia 8 for showering:
+
+cd shower/
+
+g++  -I/afs/cern.ch/user/c/chiw/public/cms-utils/pythia8245/include \
+  -I/afs/cern.ch/user/c/chiw/public/cms-utils/HepMC-2.06.11/install/include \
+  -L/afs/cern.ch/user/c/chiw/public/cms-utils/HepMC-2.06.11/install/lib   Pythia82_reshower.cc -o Pythia8.exe  \
+  -L/afs/cern.ch/user/c/chiw/public/cms-utils/pythia8245/lib -lpythia8 -I -L -lboost_iostreams \
+  -L/afs/cern.ch/user/c/chiw/public/cms-utils/HepMC-2.06.11/install/lib -I/afs/cern.ch/user/c/chiw/public/cms-utils/HepMC-2.06.11/install//include -L/afs/cern.ch/user/c/chiw/public/cms-utils/HepMC-2.06.11/install//lib -lHepMC -ldl -lz
+
+# - Modify the shower config according to real event count.
+
+EVENT_COUNT=$(grep -c /event "$WORKDIR/helac_sample.lhe")
+echo "Identified ${EVENT_COUNT} events. Will proceed to shower."
+
+sed -i -e "s,Main:numberOfEvents = 50,Main:numberOfEvents = ${EVENT_COUNT},g" Pythia8_lhe.cmnd
+sed -i -e "s,Main:spareMode1 = 50,Main:spareMode1 = ${EVENT_COUNT},g" Pythia8_lhe.cmnd
+
+# - Conduct showering.
+
+./Pythia8.exe
+
+# - After showering, send back the HepMC data file.
+
+mv Pythia8_lhe.hep "$WORKDIR/test_Jpsi1Jpsi1Y8.dat"

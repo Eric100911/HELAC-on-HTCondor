@@ -13,5 +13,5 @@ dryrun: condor_submit.tar condor_submit.sub seeds.txt
 seeds.txt:
 	seq 11 20 > $@
 
-condor_submit.tar: configs/* patch/* scripts/* sources/*
+condor_submit.tar: configs/* patch/* scripts/* sources/* shower/*
 	tar -cvf $@ $^
