@@ -75,7 +75,7 @@ ln -s $MY_LIBBOOST_SO $HEPMC_DIR/lib/libboost_iostreams.so
 if [ $AS_NEW -eq 1 ]; then
     # - Remove any existing build
     rm -rf HELAC-Onia-2.7.6
-    tar -xzvf sources/HELAC-Onia-2.7.6.tar.gz
+    tar -xzf sources/HELAC-Onia-2.7.6.tar.gz
     # - Before compilation, apply patches
     if [ -f "patch/addon/pp_NOnia_MPS/src/pp_NOnia_MPS.f90" ]; then 
         cp patch/addon/pp_NOnia_MPS/src/pp_NOnia_MPS.f90 HELAC-Onia-2.7.6/addon/pp_NOnia_MPS/src/pp_NOnia_MPS.f90
@@ -125,8 +125,8 @@ if [ -f "../configs/addon/pp_NOnia_MPS/input/states.inp" ]; then
 fi
 
 
-if [ -f "../configs/addon/pp_psiY_sps/input/states.inp" ]; then
-    cp ../configs/addon/pp_psiY_sps/input/states.inp addon/pp_psiY_SPS/input/states.inp
+if [ -f "../configs/addon/pp_psiY_SPS/input/states.inp" ]; then
+    cp ../configs/addon/pp_psiY_SPS/input/states.inp addon/pp_psiY_SPS/input/states.inp
 fi
 
 # - Run HELAC-Onia
@@ -138,7 +138,18 @@ RUN_DIR=$(egrep "INFO: Results are collected in" ../run_HELAC.log | \
 
 # - Copy the resulting LHE file to the current directory.
 if [ -f "$RUN_DIR/P0_addon_pp_psiY_SPS/output/sample_pp_psiY_sps.lhe" ]; then
-    cp "$RUN_DIR/P0_addon_pp_psiY_SPS/output/sample_pp_psiY_sps.lhe" "$WORKDIR/helac_sample.lhe"
+    # - Random shuffle the events in the LHE file if shower/shuffle_lhe.cpp is present.
+    if [ -f "$WORKDIR/shower/shuffle_lhe.cpp" ]; then
+        # - Potentially having "</event></LesHouchesEvents>" at the end of the LHE file can cause issues.
+        # - Separate the last line if it contains these tags.
+        sed -i -e '$ s,</event></LesHouchesEvents>,</event>\n</LesHouchesEvents>,' "$RUN_DIR/P0_addon_pp_psiY_SPS/output/sample_pp_psiY_sps.lhe"
+        echo "Shuffling LHE events using shower/shuffle_lhe.cpp"
+        g++ --std=c++11 -g "$WORKDIR/shower/shuffle_lhe.cpp" -o "$WORKDIR/shower/shuffle_lhe"
+        "$WORKDIR/shower/shuffle_lhe" "$RUN_DIR/P0_addon_pp_psiY_SPS/output/sample_pp_psiY_sps.lhe" "$WORKDIR/helac_sample.lhe"
+    else
+        echo "No shower/shuffle_lhe.cpp found, copying LHE file directly."
+        cp "$RUN_DIR/P0_addon_pp_psiY_SPS/output/sample_pp_psiY_sps.lhe" "$WORKDIR/helac_sample.lhe"
+    fi
 else
     echo "Error: No output LHE file found in $RUN_DIR"
     exit 1

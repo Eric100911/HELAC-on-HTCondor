@@ -1,5 +1,5 @@
 set cmass = 1.54845d0
-set bmass = 5.0117d0
+set bmass = 4.73020d0
 set preunw = 3600
 set unwevt = 5000
 set nmc = 100000

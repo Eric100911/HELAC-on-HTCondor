@@ -13,5 +13,5 @@ dryrun: condor_submit.tar condor_submit.sub seeds.txt
 seeds.txt:
 	seq 11 20 > $@
 
-condor_submit.tar: configs/* patch/* scripts/* sources/* shower/*
+condor_submit.tar: configs/* patch/* scripts/* sources/HELAC-Onia-2.7.6.tar.gz shower/*
 	tar -cvf $@ $^
