@@ -2,6 +2,8 @@ HELAC-Onia-2.7.6/
 HepMC/
 sources/
 log/
+local/
+depre*/
 PROC_HO_*/
 seeds.txt
 *.lhe
