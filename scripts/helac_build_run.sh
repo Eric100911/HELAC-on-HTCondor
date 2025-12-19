@@ -173,7 +173,7 @@ mkdir -p "$LHE_CHUNK_DIR"
 
 # - Use event_splitter to split the LHE file
 # Allow override via environment variable, otherwise use default path
-EVENT_SPLITTER=${EVENT_SPLITTER:-/afs/cern.ch/user/c/chiw/condor/LHE-split/build/event_splitter}
+EVENT_SPLITTER=${EVENT_SPLITTER:-/afs/cern.ch/user/c/chiw/condor/LHE-split/build/slc7_amd64_gcc12/event_splitter}
 if [ ! -x "$EVENT_SPLITTER" ]; then
     echo "Error: event_splitter not found at $EVENT_SPLITTER"
     echo "You can override the path by setting EVENT_SPLITTER environment variable"
