@@ -249,6 +249,12 @@ for (( i=0; i<NUM_CHUNKS; i++ )); do
     fi
     
     echo "Chunk $i processed successfully, output: $CHUNK_OUTPUT"
+    
+    # Clean up intermediate files to save disk space
+    # Keep only the output .hep file and remove compilation artifacts
+    rm -f "pythia8_chunk_${i}.cc" "pythia8_chunk_${i}.exe" "$CHUNK_CMND"
+    # Optionally keep log files for debugging, but they can be removed too if space is critical
+    # rm -f "pythia8_chunk_${i}.log"
 done
 
 # - Copy HepMC chunk files to WORKDIR for later GENSIM processing

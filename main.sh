@@ -117,6 +117,15 @@ fi
 
 echo "GENSIM files merged successfully into $MERGED_GENSIM"
 
+# Clean up intermediate GENSIM chunk files to save disk space
+echo "Cleaning up intermediate GENSIM chunk files..."
+for GENSIM_CHUNK in "${GENSIM_FILES[@]}"; do
+    rm -f "$GENSIM_CHUNK"
+done
+
+# Also clean up intermediate config files
+rm -f step1_Jpsi1Jpsi1Y8_cfg_chunk_*.py
+
 # Transfer the merged GENSIM output file back to the output directory
 cp "$MERGED_GENSIM" \
     /eos/user/c/chiw/JpsiJpsiPhi/MC_samples/GENSIM/DPS-JpsiJpsi-Phi/filter_JPsi_PtMin6p0_Phi_PtMin6p0/DPS-JpsiJpsi-Phi1020_JJPhi_4Mu2K_13p6TeV_TuneCP5_pythia8_Run3Summer22_GENSIM_${MY_SEED}.root
