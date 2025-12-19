@@ -217,15 +217,8 @@ for (( i=0; i<NUM_CHUNKS; i++ )); do
     sed -i -e "s,Main:numberOfEvents = 50,Main:numberOfEvents = ${CHUNK_EVENT_COUNT},g" "$CHUNK_CMND"
     sed -i -e "s,Main:spareMode1 = 50,Main:spareMode1 = ${CHUNK_EVENT_COUNT},g" "$CHUNK_CMND"
     
-    # Modify Pythia82_reshower.cc to accept command file and output file as arguments
-    # Create a wrapper script instead to avoid recompiling
+    # Create a modified version of the Pythia8 source with chunk-specific filenames
     CHUNK_OUTPUT="Pythia8_lhe_chunk_${i}.hep"
-    
-    # Temporarily modify the Pythia8_lhe.cmnd symlink to point to chunk config
-    ln -sf "$CHUNK_CMND" Pythia8_lhe.cmnd.tmp
-    
-    # Also modify the output filename in the C++ source via a modified version
-    # Since the original code hardcodes filenames, use sed to create a modified version
     sed -e "s/Pythia8_lhe.cmnd/$CHUNK_CMND/g" \
         -e "s/Pythia8_lhe.hep/$CHUNK_OUTPUT/g" \
         Pythia82_reshower.cc > "pythia8_chunk_${i}.cc"
