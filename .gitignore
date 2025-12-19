@@ -13,3 +13,5 @@ seeds.txt
 *.tar
 *.tgz
 *.tar.gz
+# Generated HTCondor submit file (from template)
+condor_submit_shower.sub

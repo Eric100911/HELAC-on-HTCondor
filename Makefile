@@ -21,13 +21,17 @@ submit_full: condor_submit_full.tar condor_submit_full.sub seeds.txt
 	condor_submit condor_submit_full.sub
 
 # Shower-only workflow: process existing LHE files
-submit_shower: condor_submit_shower.tar condor_submit_shower.sub seeds.txt
+submit_shower: condor_submit_shower.tar seeds.txt
 	@if [ -z "$(LHE_SOURCE_DIR)" ]; then \
 		echo "Error: LHE_SOURCE_DIR must be set"; \
 		echo "Usage: make submit_shower LHE_SOURCE_DIR=/path/to/lhe/files"; \
 		exit 1; \
 	fi
 	mkdir -p log
+	@echo "Generating condor_submit_shower.sub with LHE_SOURCE_DIR=$(LHE_SOURCE_DIR)"
+	@sed -e 's|LHE_SOURCE_DIR_PLACEHOLDER|$(LHE_SOURCE_DIR)|g' \
+	     -e 's|LHE_ARCHIVE_DIR_PLACEHOLDER|$(LHE_ARCHIVE_DIR)|g' \
+	     condor_submit_shower.sub.template > condor_submit_shower.sub
 	condor_submit condor_submit_shower.sub
 
 # Backward compatibility

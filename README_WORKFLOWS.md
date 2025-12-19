@@ -32,11 +32,15 @@ Processes pre-existing LHE files without running HELAC-Onia generation.
 **Usage:**
 ```bash
 make submit_shower LHE_SOURCE_DIR=/path/to/lhe/files
+# With optional archiving
+make submit_shower LHE_SOURCE_DIR=/path/to/lhe/files LHE_ARCHIVE_DIR=/path/to/archive
 ```
 
 **Environment variables:**
 - `LHE_SOURCE_DIR` - Directory containing existing LHE files (required)
 - `LHE_ARCHIVE_DIR` - Directory to archive LHE files (optional)
+
+**Note:** The Makefile will automatically generate `condor_submit_shower.sub` from the template with your environment variables embedded. This ensures the HTCondor job has access to the LHE file locations.
 
 **What it does:**
 1. Finds LHE file for the given seed
