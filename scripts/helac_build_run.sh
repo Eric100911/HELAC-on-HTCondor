@@ -162,7 +162,8 @@ EVENT_COUNT=$(grep -c /event "$WORKDIR/helac_sample.lhe")
 echo "Identified ${EVENT_COUNT} events in LHE file."
 
 # - Split LHE file into chunks of 30 events to avoid segmentation faults
-EVENTS_PER_CHUNK=30
+# Allow override via environment variable, otherwise use default of 30 events per chunk
+EVENTS_PER_CHUNK=${EVENTS_PER_CHUNK:-30}
 NUM_CHUNKS=$(( (EVENT_COUNT + EVENTS_PER_CHUNK - 1) / EVENTS_PER_CHUNK ))
 echo "Splitting LHE file into ${NUM_CHUNKS} chunks of ${EVENTS_PER_CHUNK} events each."
 
@@ -171,9 +172,11 @@ LHE_CHUNK_DIR="$WORKDIR/lhe_chunks"
 mkdir -p "$LHE_CHUNK_DIR"
 
 # - Use event_splitter to split the LHE file
-EVENT_SPLITTER=/afs/cern.ch/user/c/chiw/condor/LHE-split/build/event_splitter
+# Allow override via environment variable, otherwise use default path
+EVENT_SPLITTER=${EVENT_SPLITTER:-/afs/cern.ch/user/c/chiw/condor/LHE-split/build/event_splitter}
 if [ ! -x "$EVENT_SPLITTER" ]; then
     echo "Error: event_splitter not found at $EVENT_SPLITTER"
+    echo "You can override the path by setting EVENT_SPLITTER environment variable"
     exit 1
 fi
 
@@ -218,6 +221,9 @@ for (( i=0; i<NUM_CHUNKS; i++ )); do
     sed -i -e "s,Main:spareMode1 = 50,Main:spareMode1 = ${CHUNK_EVENT_COUNT},g" "$CHUNK_CMND"
     
     # Create a modified version of the Pythia8 source with chunk-specific filenames
+    # Note: The original Pythia82_reshower.cc hardcodes input/output filenames,
+    # so we must create a modified source file for each chunk rather than
+    # passing filenames as command-line arguments
     CHUNK_OUTPUT="Pythia8_lhe_chunk_${i}.hep"
     sed -e "s/Pythia8_lhe.cmnd/$CHUNK_CMND/g" \
         -e "s/Pythia8_lhe.hep/$CHUNK_OUTPUT/g" \
