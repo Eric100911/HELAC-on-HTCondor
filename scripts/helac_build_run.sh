@@ -199,6 +199,11 @@ g++  -I/afs/cern.ch/user/c/chiw/public/cms-utils/pythia8245/include \
 # - Process each LHE chunk with Pythia8
 echo "Processing ${NUM_CHUNKS} LHE chunks with Pythia8 showering..."
 
+# Backup the original command file since we'll create a symlink
+if [ ! -f "Pythia8_lhe.cmnd.orig" ]; then
+    cp Pythia8_lhe.cmnd Pythia8_lhe.cmnd.orig
+fi
+
 for (( i=0; i<NUM_CHUNKS; i++ )); do
     CHUNK_FILE="$LHE_CHUNK_DIR/chunk_$(printf "%05d" $i).lhe"
     
@@ -211,51 +216,46 @@ for (( i=0; i<NUM_CHUNKS; i++ )); do
     CHUNK_EVENT_COUNT=$(grep -c /event "$CHUNK_FILE")
     echo "Processing chunk $i with ${CHUNK_EVENT_COUNT} events..."
     
-    # Create a copy of the Pythia8 command file for this chunk
-    CHUNK_CMND="Pythia8_lhe_chunk_${i}.cmnd"
-    cp Pythia8_lhe.cmnd "$CHUNK_CMND"
+    # Create a modified command file for this chunk
+    # The Pythia8.exe expects to read "Pythia8_lhe.cmnd" and write "Pythia8_lhe.hep"
+    # We create a chunk-specific command file and use symlinks to make it work
+    CHUNK_CMND_TEMP="Pythia8_lhe_chunk_${i}.cmnd"
+    cp Pythia8_lhe.cmnd.orig "$CHUNK_CMND_TEMP"
     
-    # Update the command file to point to this chunk
-    sed -i -e "s,Beams:LHEF = ../helac_sample.lhe,Beams:LHEF = $CHUNK_FILE,g" "$CHUNK_CMND"
-    sed -i -e "s,Main:numberOfEvents = 50,Main:numberOfEvents = ${CHUNK_EVENT_COUNT},g" "$CHUNK_CMND"
-    sed -i -e "s,Main:spareMode1 = 50,Main:spareMode1 = ${CHUNK_EVENT_COUNT},g" "$CHUNK_CMND"
+    # Update the command file to point to this chunk's LHE file and event count
+    sed -i -e "s,Beams:LHEF = ../helac_sample.lhe,Beams:LHEF = $CHUNK_FILE,g" "$CHUNK_CMND_TEMP"
+    sed -i -e "s,Main:numberOfEvents = 50,Main:numberOfEvents = ${CHUNK_EVENT_COUNT},g" "$CHUNK_CMND_TEMP"
+    sed -i -e "s,Main:spareMode1 = 50,Main:spareMode1 = ${CHUNK_EVENT_COUNT},g" "$CHUNK_CMND_TEMP"
     
-    # Create a modified version of the Pythia8 source with chunk-specific filenames
-    # Note: The original Pythia82_reshower.cc hardcodes input/output filenames,
-    # so we must create a modified source file for each chunk rather than
-    # passing filenames as command-line arguments
+    # Replace Pythia8_lhe.cmnd with symlink to the chunk-specific command file
+    # The Pythia8.exe will read this as "Pythia8_lhe.cmnd"
+    rm -f Pythia8_lhe.cmnd
+    ln -s "$CHUNK_CMND_TEMP" Pythia8_lhe.cmnd
+    
+    # Run the single Pythia8 executable (compiled once above)
+    # It will read Pythia8_lhe.cmnd (symlink) and write to Pythia8_lhe.hep
+    ./Pythia8.exe > "pythia8_chunk_${i}.log" 2>&1
+    
+    # Rename the output to a chunk-specific name
     CHUNK_OUTPUT="Pythia8_lhe_chunk_${i}.hep"
-    sed -e "s/Pythia8_lhe.cmnd/$CHUNK_CMND/g" \
-        -e "s/Pythia8_lhe.hep/$CHUNK_OUTPUT/g" \
-        Pythia82_reshower.cc > "pythia8_chunk_${i}.cc"
-    
-    # Compile the modified version
-    g++ -I/afs/cern.ch/user/c/chiw/public/cms-utils/pythia8245/include \
-        -I/afs/cern.ch/user/c/chiw/public/cms-utils/HepMC-2.06.11/install/include \
-        -L/afs/cern.ch/user/c/chiw/public/cms-utils/HepMC-2.06.11/install/lib \
-        "pythia8_chunk_${i}.cc" -o "pythia8_chunk_${i}.exe" \
-        -L/afs/cern.ch/user/c/chiw/public/cms-utils/pythia8245/lib -lpythia8 \
-        -lboost_iostreams \
-        -L/afs/cern.ch/user/c/chiw/public/cms-utils/HepMC-2.06.11/install/lib \
-        -lHepMC -ldl -lz
-    
-    # Run the chunk-specific executable
-    "./pythia8_chunk_${i}.exe" > "pythia8_chunk_${i}.log" 2>&1
-    
-    if [ ! -f "$CHUNK_OUTPUT" ]; then
+    if [ ! -f "Pythia8_lhe.hep" ]; then
         echo "Error: Failed to generate HepMC output for chunk $i"
         cat "pythia8_chunk_${i}.log"
         exit 1
     fi
+    mv Pythia8_lhe.hep "$CHUNK_OUTPUT"
     
     echo "Chunk $i processed successfully, output: $CHUNK_OUTPUT"
     
     # Clean up intermediate files to save disk space
-    # Keep only the output .hep file and remove compilation artifacts
-    rm -f "pythia8_chunk_${i}.cc" "pythia8_chunk_${i}.exe" "$CHUNK_CMND"
+    rm -f "$CHUNK_CMND_TEMP"
     # Optionally keep log files for debugging, but they can be removed too if space is critical
     # rm -f "pythia8_chunk_${i}.log"
 done
+
+# Restore the original command file
+rm -f Pythia8_lhe.cmnd
+mv Pythia8_lhe.cmnd.orig Pythia8_lhe.cmnd
 
 # - Copy HepMC chunk files to WORKDIR for later GENSIM processing
 echo "Copying HepMC chunk files to WORKDIR..."
