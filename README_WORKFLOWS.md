@@ -142,6 +142,30 @@ Where `${SEED}` is the job seed number.
 - Only final GENSIM output and log files retained
 - Chunk-specific command files cleaned after processing
 
+## Error Handling
+
+**Pythia8 Segfault Protection:**
+- Pythia8 occasionally crashes (segfault/memory corruption) after processing chunks
+- The workflow includes automatic retry logic (up to 2 retries per chunk)
+- Failed chunks are logged and processing continues with successful chunks
+- Summary report shows success rate and identifies failed chunks
+- Processing succeeds if at least one chunk completes successfully
+- Events from failed chunks are lost, but the majority of events are preserved
+
+**Example Summary:**
+```
+========================================
+Pythia8 Processing Summary
+========================================
+Total chunks: 67
+Successful: 65
+Failed: 2
+Failed chunk IDs: 2 45
+Success rate: 97.0%
+========================================
+Note: Approximately 60 events were lost due to processing failures
+```
+
 ## Example Usage
 
 ### Full workflow with custom chunk size
