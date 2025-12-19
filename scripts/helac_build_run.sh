@@ -157,8 +157,34 @@ fi
 
 cd "$WORKDIR"
 
-# Build Pythia 8 for showering:
+# - Count events in the LHE file
+EVENT_COUNT=$(grep -c /event "$WORKDIR/helac_sample.lhe")
+echo "Identified ${EVENT_COUNT} events in LHE file."
 
+# - Split LHE file into chunks of 30 events to avoid segmentation faults
+EVENTS_PER_CHUNK=30
+NUM_CHUNKS=$(( (EVENT_COUNT + EVENTS_PER_CHUNK - 1) / EVENTS_PER_CHUNK ))
+echo "Splitting LHE file into ${NUM_CHUNKS} chunks of ${EVENTS_PER_CHUNK} events each."
+
+# - Create directory for LHE chunks
+LHE_CHUNK_DIR="$WORKDIR/lhe_chunks"
+mkdir -p "$LHE_CHUNK_DIR"
+
+# - Use event_splitter to split the LHE file
+EVENT_SPLITTER=/afs/cern.ch/user/c/chiw/condor/LHE-split/build/event_splitter
+if [ ! -x "$EVENT_SPLITTER" ]; then
+    echo "Error: event_splitter not found at $EVENT_SPLITTER"
+    exit 1
+fi
+
+$EVENT_SPLITTER -i "$WORKDIR/helac_sample.lhe" \
+                -o "$LHE_CHUNK_DIR" \
+                -n "$NUM_CHUNKS" \
+                --file-prefix "chunk_" \
+                --file-offset 0 \
+                -seq
+
+# Build Pythia 8 for showering:
 cd shower/
 
 g++  -I/afs/cern.ch/user/c/chiw/public/cms-utils/pythia8245/include \
@@ -167,18 +193,75 @@ g++  -I/afs/cern.ch/user/c/chiw/public/cms-utils/pythia8245/include \
   -L/afs/cern.ch/user/c/chiw/public/cms-utils/pythia8245/lib -lpythia8 -I -L -lboost_iostreams \
   -L/afs/cern.ch/user/c/chiw/public/cms-utils/HepMC-2.06.11/install/lib -I/afs/cern.ch/user/c/chiw/public/cms-utils/HepMC-2.06.11/install//include -L/afs/cern.ch/user/c/chiw/public/cms-utils/HepMC-2.06.11/install//lib -lHepMC -ldl -lz
 
-# - Modify the shower config according to real event count.
+# - Process each LHE chunk with Pythia8
+echo "Processing ${NUM_CHUNKS} LHE chunks with Pythia8 showering..."
 
-EVENT_COUNT=$(grep -c /event "$WORKDIR/helac_sample.lhe")
-echo "Identified ${EVENT_COUNT} events. Will proceed to shower."
+for (( i=0; i<NUM_CHUNKS; i++ )); do
+    CHUNK_FILE="$LHE_CHUNK_DIR/chunk_$(printf "%05d" $i).lhe"
+    
+    if [ ! -f "$CHUNK_FILE" ]; then
+        echo "Warning: Chunk file $CHUNK_FILE not found, skipping."
+        continue
+    fi
+    
+    # Count events in this chunk
+    CHUNK_EVENT_COUNT=$(grep -c /event "$CHUNK_FILE")
+    echo "Processing chunk $i with ${CHUNK_EVENT_COUNT} events..."
+    
+    # Create a copy of the Pythia8 command file for this chunk
+    CHUNK_CMND="Pythia8_lhe_chunk_${i}.cmnd"
+    cp Pythia8_lhe.cmnd "$CHUNK_CMND"
+    
+    # Update the command file to point to this chunk
+    sed -i -e "s,Beams:LHEF = ../helac_sample.lhe,Beams:LHEF = $CHUNK_FILE,g" "$CHUNK_CMND"
+    sed -i -e "s,Main:numberOfEvents = 50,Main:numberOfEvents = ${CHUNK_EVENT_COUNT},g" "$CHUNK_CMND"
+    sed -i -e "s,Main:spareMode1 = 50,Main:spareMode1 = ${CHUNK_EVENT_COUNT},g" "$CHUNK_CMND"
+    
+    # Modify Pythia82_reshower.cc to accept command file and output file as arguments
+    # Create a wrapper script instead to avoid recompiling
+    CHUNK_OUTPUT="Pythia8_lhe_chunk_${i}.hep"
+    
+    # Temporarily modify the Pythia8_lhe.cmnd symlink to point to chunk config
+    ln -sf "$CHUNK_CMND" Pythia8_lhe.cmnd.tmp
+    
+    # Also modify the output filename in the C++ source via a modified version
+    # Since the original code hardcodes filenames, use sed to create a modified version
+    sed -e "s/Pythia8_lhe.cmnd/$CHUNK_CMND/g" \
+        -e "s/Pythia8_lhe.hep/$CHUNK_OUTPUT/g" \
+        Pythia82_reshower.cc > "pythia8_chunk_${i}.cc"
+    
+    # Compile the modified version
+    g++ -I/afs/cern.ch/user/c/chiw/public/cms-utils/pythia8245/include \
+        -I/afs/cern.ch/user/c/chiw/public/cms-utils/HepMC-2.06.11/install/include \
+        -L/afs/cern.ch/user/c/chiw/public/cms-utils/HepMC-2.06.11/install/lib \
+        "pythia8_chunk_${i}.cc" -o "pythia8_chunk_${i}.exe" \
+        -L/afs/cern.ch/user/c/chiw/public/cms-utils/pythia8245/lib -lpythia8 \
+        -lboost_iostreams \
+        -L/afs/cern.ch/user/c/chiw/public/cms-utils/HepMC-2.06.11/install/lib \
+        -lHepMC -ldl -lz
+    
+    # Run the chunk-specific executable
+    "./pythia8_chunk_${i}.exe" > "pythia8_chunk_${i}.log" 2>&1
+    
+    if [ ! -f "$CHUNK_OUTPUT" ]; then
+        echo "Error: Failed to generate HepMC output for chunk $i"
+        cat "pythia8_chunk_${i}.log"
+        exit 1
+    fi
+    
+    echo "Chunk $i processed successfully, output: $CHUNK_OUTPUT"
+done
 
-sed -i -e "s,Main:numberOfEvents = 50,Main:numberOfEvents = ${EVENT_COUNT},g" Pythia8_lhe.cmnd
-sed -i -e "s,Main:spareMode1 = 50,Main:spareMode1 = ${EVENT_COUNT},g" Pythia8_lhe.cmnd
+# - Copy HepMC chunk files to WORKDIR for later GENSIM processing
+echo "Copying HepMC chunk files to WORKDIR..."
+for (( i=0; i<NUM_CHUNKS; i++ )); do
+    CHUNK_HEP="Pythia8_lhe_chunk_${i}.hep"
+    if [ -f "$CHUNK_HEP" ]; then
+        cp "$CHUNK_HEP" "$WORKDIR/test_Jpsi1Jpsi1Y8_chunk_${i}.dat"
+        echo "Copied $CHUNK_HEP to $WORKDIR/test_Jpsi1Jpsi1Y8_chunk_${i}.dat"
+    else
+        echo "Warning: Chunk HepMC file $CHUNK_HEP not found"
+    fi
+done
 
-# - Conduct showering.
-
-./Pythia8.exe
-
-# - After showering, send back the HepMC data file.
-
-mv Pythia8_lhe.hep "$WORKDIR/test_Jpsi1Jpsi1Y8.dat"
+echo "All HepMC chunks prepared for GENSIM processing"
