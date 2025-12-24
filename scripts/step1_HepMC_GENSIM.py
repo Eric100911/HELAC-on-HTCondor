@@ -31,7 +31,7 @@ process.maxEvents = cms.untracked.PSet(
 
 # Input source
 process.source = cms.Source("MCFileSource",
-    fileNames = cms.untracked.vstring('file:test_Jpsi1Jpsi1Y8.dat'),
+    fileNames = cms.untracked.vstring('file:test_JpsiJpsiPhi.dat'),
     firstLuminosityBlockForEachRun = cms.untracked.VLuminosityBlockID([]),
     # fileNames = cms.untracked.vstring('file:/tmp/'+os.environ['USER']+'/hepmc10K.dat'),
 )
@@ -86,7 +86,7 @@ process.RAWSIMoutput = cms.OutputModule("PoolOutputModule",
         filterName = cms.untracked.string('')
     ),
     eventAutoFlushCompressedSize = cms.untracked.int32(20971520),
-    fileName = cms.untracked.string('file:JJY1S_Y1S-Octet_SPS_6Mu_13p6TeV_TuneCP5_pythia8_Run3Summer22_GENSIM.root'),
+    fileName = cms.untracked.string('file:step1_Run3Summer22_GENSIM.root'),
     outputCommands = process.RAWSIMEventContent.outputCommands,
     splitLevel = cms.untracked.int32(0)
 )

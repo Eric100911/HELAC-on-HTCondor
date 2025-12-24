@@ -71,114 +71,125 @@ export LD_LIBRARY_PATH=$HEPMC_DIR/lib:$LD_LIBRARY_PATH
 ln -s $MY_LIBBOOST_A $HEPMC_DIR/lib/libboost_iostreams.a
 ln -s $MY_LIBBOOST_SO $HEPMC_DIR/lib/libboost_iostreams.so
 
-# Build HELAC-Onia.
-if [ $AS_NEW -eq 1 ]; then
-    # - Remove any existing build
-    rm -rf HELAC-Onia-2.7.6
-    tar -xzf sources/HELAC-Onia-2.7.6.tar.gz
-    # - Before compilation, apply patches
-    if [ -f "patch/addon/pp_NOnia_MPS/src/pp_NOnia_MPS.f90" ]; then 
-        cp patch/addon/pp_NOnia_MPS/src/pp_NOnia_MPS.f90 HELAC-Onia-2.7.6/addon/pp_NOnia_MPS/src/pp_NOnia_MPS.f90
-	    cp HELAC-Onia-2.7.6/src/RANDA_init.inc HELAC-Onia-2.7.6/addon/pp_NOnia_MPS/src/
-    fi
-    # - Enter directory and check that the lhapdfobj setting in pp_psiY_SPS is already blocked.
-    cd HELAC-Onia-2.7.6
-    if egrep -q "^\W*lhapdfobj" addon/pp_psiY_SPS/src/makefile ; then
-        echo "Blocking lhapdfobj setting in addon/pp_psiY_SPS/src/makefile"
-        sed -i -r -e 's/^.*lhapdfobj.*/#lhapdfobj=/' addon/pp_psiY_SPS/src/makefile
-    fi
+# Check if "$WORKDIR/helac_sample.lhe" does exist already
+if [ ! -f "$WORKDIR/helac_sample.lhe" ]; then
+# Build HELAC-Onia for MC production.
+    if [ $AS_NEW -eq 1 ]; then
+        # - Remove any existing build
+        rm -rf HELAC-Onia-2.7.6
+        tar -xzf sources/HELAC-Onia-2.7.6.tar.gz
+        # - Before compilation, apply patches
+        if [ -f "patch/addon/pp_NOnia_MPS/src/pp_NOnia_MPS.f90" ]; then 
+            cp patch/addon/pp_NOnia_MPS/src/pp_NOnia_MPS.f90 HELAC-Onia-2.7.6/addon/pp_NOnia_MPS/src/pp_NOnia_MPS.f90
+            cp HELAC-Onia-2.7.6/src/RANDA_init.inc HELAC-Onia-2.7.6/addon/pp_NOnia_MPS/src/
+        fi
+        # - Enter directory and check that the lhapdfobj setting in pp_psiY_SPS is already blocked.
+        cd HELAC-Onia-2.7.6
+        if egrep -q "^\W*lhapdfobj" addon/pp_psiY_SPS/src/makefile ; then
+            echo "Blocking lhapdfobj setting in addon/pp_psiY_SPS/src/makefile"
+            sed -i -r -e 's/^.*lhapdfobj.*/#lhapdfobj=/' addon/pp_psiY_SPS/src/makefile
+        fi
 
-    # - Check that the HepMC installation directory is set in input/ho_configuration.txt
-    sed -i -r -e "s|^# hepmc_path.*$|hepmc_path = $HEPMC_DIR|" input/ho_configuration.txt
+        # - Check that the HepMC installation directory is set in input/ho_configuration.txt
+        sed -i -r -e "s|^# hepmc_path.*$|hepmc_path = $HEPMC_DIR|" input/ho_configuration.txt
 
-    # - Connect Pythia 8 installation also
-    sed -i -r -e "s|^# pythia8_path.*$|pythia8_path = $PYTHIA_INSTALL_PATH|" input/ho_configuration.txt
+        # - Connect Pythia 8 installation also
+        sed -i -r -e "s|^# pythia8_path.*$|pythia8_path = $PYTHIA_INSTALL_PATH|" input/ho_configuration.txt
 
-    # - Compile HELAC-Onia
-    if [[ $DRYRUN -eq 0 ]]; then
-        ./config
+        # - Compile HELAC-Onia
+        if [[ $DRYRUN -eq 0 ]]; then
+            ./config
+        else
+            echo "Dryrun mode: HELAC-Onia build command:"
+            echo "./config"
+        fi
     else
-        echo "Dryrun mode: HELAC-Onia build command:"
-        echo "./config"
+        echo "Using existing HELAC-Onia build"
+        cd HELAC-Onia-2.7.6
     fi
-else
-    echo "Using existing HELAC-Onia build"
-    cd HELAC-Onia-2.7.6
-fi
 
 
-# Run HELAC-Onia with the configuration file in ../configs/run_HELAC.ho
-# - Modify the random seed first:
-sed -e "s/MY_SEED/$SEED/" ../configs/run_HELAC.ho.tpl > ../configs/run_HELAC.ho
+    # Run HELAC-Onia with the configuration file in ../configs/run_HELAC.ho
+    # - Modify the random seed first:
+    sed -e "s/MY_SEED/$SEED/" ../configs/run_HELAC.ho.tpl > ../configs/run_HELAC.ho
 
-# - More config file changes
-if [ -f "../configs/input/py8_onia_user.inp" ]; then
-    cp ../configs/input/py8_onia_user.inp input/py8_onia_user.inp
-fi
+    # - More config file changes
+    if [ -f "../configs/input/py8_onia_user.inp" ]; then
+        cp ../configs/input/py8_onia_user.inp input/py8_onia_user.inp
+    fi
 
-if [ -f "../configs/input/user.inp" ]; then
-    cp ../configs/input/user.inp input/user.inp
-fi
+    if [ -f "../configs/input/user.inp" ]; then
+        cp ../configs/input/user.inp input/user.inp
+    fi
 
-if [ -f "../configs/addon/pp_NOnia_MPS/input/states.inp" ]; then
-    cp ../configs/addon/pp_NOnia_MPS/input/states.inp addon/pp_NOnia_MPS/input/states.inp
-fi
+    if [ -f "../configs/addon/pp_NOnia_MPS/input/states.inp" ]; then
+        cp ../configs/addon/pp_NOnia_MPS/input/states.inp addon/pp_NOnia_MPS/input/states.inp
+    fi
 
 
-if [ -f "../configs/addon/pp_psiY_SPS/input/states.inp" ]; then
-    cp ../configs/addon/pp_psiY_SPS/input/states.inp addon/pp_psiY_SPS/input/states.inp
-fi
+    if [ -f "../configs/addon/pp_psiY_SPS/input/states.inp" ]; then
+        cp ../configs/addon/pp_psiY_SPS/input/states.inp addon/pp_psiY_SPS/input/states.inp
+    fi
 
-# - Run HELAC-Onia
-./ho_cluster < ../configs/run_HELAC.ho | tee ../run_HELAC.log
+    # - Run HELAC-Onia
+    ./ho_cluster < ../configs/run_HELAC.ho | tee ../run_HELAC.log
 
-# Collect output and input info from the run.
-RUN_DIR=$(egrep "INFO: Results are collected in" ../run_HELAC.log | \
-            sed -r -e "s,^.*(PROC_HO_[0-9]+)\/.*$,\1,g")
+    # Collect output and input info from the run.
+    RUN_DIR=$(egrep "INFO: Results are collected in" ../run_HELAC.log | \
+                sed -r -e "s,^.*(PROC_HO_[0-9]+)\/.*$,\1,g")
 
-# - Copy the resulting LHE file to the current directory.
-if [ -f "$RUN_DIR/P0_addon_pp_psiY_SPS/output/sample_pp_psiY_sps.lhe" ]; then
-    # - Random shuffle the events in the LHE file if shower/shuffle_lhe.cpp is present.
-    if [ -f "$WORKDIR/shower/shuffle_lhe.cpp" ]; then
-        # - Potentially having "</event></LesHouchesEvents>" at the end of the LHE file can cause issues.
-        # - Separate the last line if it contains these tags.
-        sed -i -e '$ s,</event></LesHouchesEvents>,</event>\n</LesHouchesEvents>,' "$RUN_DIR/P0_addon_pp_psiY_SPS/output/sample_pp_psiY_sps.lhe"
-        echo "Shuffling LHE events using shower/shuffle_lhe.cpp"
-        g++ --std=c++11 -g "$WORKDIR/shower/shuffle_lhe.cpp" -o "$WORKDIR/shower/shuffle_lhe"
-        "$WORKDIR/shower/shuffle_lhe" "$RUN_DIR/P0_addon_pp_psiY_SPS/output/sample_pp_psiY_sps.lhe" "$WORKDIR/helac_sample.lhe"
+    # - Copy the resulting LHE file to the current directory.
+    if [ -f "$RUN_DIR/P0_addon_pp_psiY_SPS/output/sample_pp_psiY_sps.lhe" ]; then
+        # - Random shuffle the events in the LHE file if shower/shuffle_lhe.cpp is present.
+        # if [ -f "$WORKDIR/shower/shuffle_lhe.cpp" ]; then
+        #     # - Potentially having "</event></LesHouchesEvents>" at the end of the LHE file can cause issues.
+        #     # - Separate the last line if it contains these tags.
+        #     sed -i -e 's,</event></LesHouchesEvents>,</event>\n</LesHouchesEvents>,' "$RUN_DIR/P0_addon_pp_psiY_SPS/output/sample_pp_psiY_sps.lhe"
+        #     echo "Shuffling LHE events using shower/shuffle_lhe.cpp"
+        #     g++ --std=c++11 -g "$WORKDIR/shower/shuffle_lhe.cpp" -o "$WORKDIR/shower/shuffle_lhe"
+        #     "$WORKDIR/shower/shuffle_lhe" "$RUN_DIR/P0_addon_pp_psiY_SPS/output/sample_pp_psiY_sps.lhe" "$WORKDIR/helac_sample.lhe"
+        # else
+        #     echo "No shower/shuffle_lhe.cpp found, copying LHE file directly."
+        #     cp "$RUN_DIR/P0_addon_pp_psiY_SPS/output/sample_pp_psiY_sps.lhe" "$WORKDIR/helac_sample.lhe"
+        # fi
+        echo "Transferring $RUN_DIR/P0_addon_pp_psiY_SPS/output/sample_pp_psiY_sps.lhe"
+        mv "$RUN_DIR/P0_addon_pp_psiY_SPS/output/sample_pp_psiY_sps.lhe" > "$WORKDIR/helac_sample.lhe"
     else
-        echo "No shower/shuffle_lhe.cpp found, copying LHE file directly."
-        cp "$RUN_DIR/P0_addon_pp_psiY_SPS/output/sample_pp_psiY_sps.lhe" "$WORKDIR/helac_sample.lhe"
+        echo "Error: No output LHE file found in $RUN_DIR"
+        exit 1
     fi
-else
-    echo "Error: No output LHE file found in $RUN_DIR"
-    exit 1
+    # End of generation from HELAC-Onia 2.7.6
+    cd "$WORKDIR"
 fi
 
-cd "$WORKDIR"
+# - Potentially having "</event></LesHouchesEvents>" at the end of the LHE file.
+# - Separate the last line to remove the risk.
+sed -i -e 's,</event></LesHouchesEvents>,</event>\n</LesHouchesEvents>,' "$WORKDIR/helac_sample.lhe"
 
 # Build Pythia 8 for showering:
 
 cd shower/
 
-g++  -I/afs/cern.ch/user/c/chiw/public/cms-utils/pythia8245/include \
-  -I/afs/cern.ch/user/c/chiw/public/cms-utils/HepMC-2.06.11/install/include \
-  -L/afs/cern.ch/user/c/chiw/public/cms-utils/HepMC-2.06.11/install/lib   Pythia82_reshower.cc -o Pythia8.exe  \
-  -L/afs/cern.ch/user/c/chiw/public/cms-utils/pythia8245/lib -lpythia8 -I -L -lboost_iostreams \
-  -L/afs/cern.ch/user/c/chiw/public/cms-utils/HepMC-2.06.11/install/lib -I/afs/cern.ch/user/c/chiw/public/cms-utils/HepMC-2.06.11/install//include -L/afs/cern.ch/user/c/chiw/public/cms-utils/HepMC-2.06.11/install//lib -lHepMC -ldl -lz
+# g++  -I/afs/cern.ch/user/c/chiw/public/cms-utils/pythia8245/include \
+#   -I/afs/cern.ch/user/c/chiw/public/cms-utils/HepMC-2.06.11/install/include \
+#   -L/afs/cern.ch/user/c/chiw/public/cms-utils/HepMC-2.06.11/install/lib   Pythia82_reshower.cc -o Pythia8.exe  \
+#   -L/afs/cern.ch/user/c/chiw/public/cms-utils/pythia8245/lib -lpythia8 -I -L -lboost_iostreams \
+#   -L/afs/cern.ch/user/c/chiw/public/cms-utils/HepMC-2.06.11/install/lib -I/afs/cern.ch/user/c/chiw/public/cms-utils/HepMC-2.06.11/install//include -L/afs/cern.ch/user/c/chiw/public/cms-utils/HepMC-2.06.11/install//lib -lHepMC -ldl -lz
 
 # - Modify the shower config according to real event count.
 
 EVENT_COUNT=$(grep -c /event "$WORKDIR/helac_sample.lhe")
 echo "Identified ${EVENT_COUNT} events. Will proceed to shower."
 
-sed -i -e "s,Main:numberOfEvents = 50,Main:numberOfEvents = ${EVENT_COUNT},g" Pythia8_lhe.cmnd
-sed -i -e "s,Main:spareMode1 = 50,Main:spareMode1 = ${EVENT_COUNT},g" Pythia8_lhe.cmnd
+# sed -i -e "s,Main:numberOfEvents = 50,Main:numberOfEvents = ${EVENT_COUNT},g" Pythia8_lhe.cmnd
+# sed -i -e "s,Main:spareMode1 = 50,Main:spareMode1 = ${EVENT_COUNT},g" Pythia8_lhe.cmnd
 
-# - Conduct showering.
+# # - Conduct showering.
 
-./Pythia8.exe
+# ./Pythia8.exe
 
-# - After showering, send back the HepMC data file.
+source "$WORKDIR/scripts/split_and_shower.sh" "$WORKDIR/helac_sample.lhe"  Pythia8_lhe.cmnd "$WORKDIR/test_JpsiJpsiPhi.dat"
 
-mv Pythia8_lhe.hep "$WORKDIR/test_Jpsi1Jpsi1Y8.dat"
+# # - After showering, send back the HepMC data file.
+
+# mv Pythia8_lhe.hep "$WORKDIR/test_Jpsi1Jpsi1Y8.dat"
