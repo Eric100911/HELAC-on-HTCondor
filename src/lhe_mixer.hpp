@@ -360,8 +360,14 @@ struct MixRecipe {
             size_t colonPos = item.find(':');
             if (colonPos != std::string::npos) {
                 std::string file = item.substr(0, colonPos);
-                size_t count = std::stoul(item.substr(colonPos + 1));
-                result.addSource(file, count);
+                try {
+                    size_t count = std::stoul(item.substr(colonPos + 1));
+                    if (count == 0) count = 1;  // Ensure non-zero count
+                    result.addSource(file, count);
+                } catch (const std::exception&) {
+                    // Invalid count, use default of 1
+                    result.addSource(file, 1);
+                }
             } else {
                 // Default count of 1
                 result.addSource(item, 1);
@@ -564,9 +570,12 @@ private:
         // Determine max number of combined events we can produce
         size_t maxCombined = SIZE_MAX;
         for (const auto& source : config_.recipe.sources) {
+            if (source.second == 0) continue;  // Skip zero-count sources
             size_t available = sourceEvents[source.first].size() / source.second;
             maxCombined = std::min(maxCombined, available);
         }
+        
+        if (maxCombined == SIZE_MAX) maxCombined = 0;  // No valid sources
         
         if (config_.maxEvents > 0) {
             maxCombined = std::min(maxCombined, config_.maxEvents);
@@ -590,9 +599,16 @@ private:
             
             // Combine events from each source
             for (const auto& source : config_.recipe.sources) {
+                if (source.second == 0) continue;  // Skip zero-count sources
+                
                 for (size_t j = 0; j < source.second; ++j) {
                     size_t& idx = sourceIndices[source.first];
-                    const Event& srcEvent = sourceEvents[source.first][idx++];
+                    const auto& events = sourceEvents[source.first];
+                    
+                    // Bounds check
+                    if (idx >= events.size()) break;
+                    
+                    const Event& srcEvent = events[idx++];
                     
                     // Add particles with sub-scattering tag
                     for (const auto& p : srcEvent.particles) {

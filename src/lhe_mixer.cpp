@@ -82,7 +82,11 @@ std::vector<int> parseIntList(const std::string& str) {
     std::string item;
     while (std::getline(ss, item, ',')) {
         if (!item.empty()) {
-            result.push_back(std::stoi(item));
+            try {
+                result.push_back(std::stoi(item));
+            } catch (const std::exception&) {
+                // Skip invalid entries
+            }
         }
     }
     return result;
