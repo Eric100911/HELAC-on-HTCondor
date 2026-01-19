@@ -13,6 +13,7 @@ workflow/generated.dag.*
 workflow/*.sub
 workflow/config/dagman.config
 dryrun*.log
+_codeql_detected_source_root
 
 # Data files
 *.lhe
