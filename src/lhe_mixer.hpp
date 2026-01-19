@@ -338,7 +338,131 @@ public:
 };
 
 /**
- * LHE Event Mixer
+ * Mix Recipe - specifies how many events to take from each source
+ * Example: {"fileA.lhe": 3, "fileB.lhe": 1} means take 3 events from A, 1 from B
+ * for each combined output event (useful for QPS: J/psi+J/psi+J/psi+phi)
+ */
+struct MixRecipe {
+    std::vector<std::pair<std::string, size_t>> sources;  // (filename, count) pairs
+    
+    // Add a source with count
+    void addSource(const std::string& file, size_t count = 1) {
+        sources.emplace_back(file, count);
+    }
+    
+    // Parse from string format: "fileA:3,fileB:1"
+    static MixRecipe parse(const std::string& recipe) {
+        MixRecipe result;
+        std::stringstream ss(recipe);
+        std::string item;
+        
+        while (std::getline(ss, item, ',')) {
+            size_t colonPos = item.find(':');
+            if (colonPos != std::string::npos) {
+                std::string file = item.substr(0, colonPos);
+                size_t count = std::stoul(item.substr(colonPos + 1));
+                result.addSource(file, count);
+            } else {
+                // Default count of 1
+                result.addSource(item, 1);
+            }
+        }
+        return result;
+    }
+    
+    // Total events per combined output
+    size_t totalPerOutput() const {
+        size_t total = 0;
+        for (const auto& s : sources) {
+            total += s.second;
+        }
+        return total;
+    }
+};
+
+/**
+ * Gluon Merger - merges close gluons in events with sub-scattering control
+ */
+class AdvancedGluonMerger {
+public:
+    double deltaRThreshold;
+    std::vector<int> subscatteringsToMerge;  // Which sub-scattering indices to merge (empty = all)
+    bool mergeAcrossSubscatterings;          // Whether to merge gluons from different sub-scatterings
+    
+    AdvancedGluonMerger(double threshold = 0.4) 
+        : deltaRThreshold(threshold), mergeAcrossSubscatterings(false) {}
+    
+    // Set which sub-scatterings to apply merging to (0-indexed)
+    void setSubscatterings(const std::vector<int>& indices) {
+        subscatteringsToMerge = indices;
+    }
+    
+    // Merge gluons in an event, respecting sub-scattering boundaries if specified
+    // subScatteringTags: maps particle index to sub-scattering index
+    void mergeGluons(Event& event, const std::map<int, int>& subScatteringTags = {}) {
+        auto gluons = event.getGluons();
+        if (gluons.size() < 2) return;
+        
+        std::vector<bool> merged(gluons.size(), false);
+        
+        for (size_t i = 0; i < gluons.size(); ++i) {
+            if (merged[i]) continue;
+            
+            // Check if this gluon's sub-scattering should be processed
+            int iTag = getSubScatteringTag(i, subScatteringTags);
+            if (!shouldProcessSubscattering(iTag)) continue;
+            
+            for (size_t j = i + 1; j < gluons.size(); ++j) {
+                if (merged[j]) continue;
+                
+                int jTag = getSubScatteringTag(j, subScatteringTags);
+                
+                // Check if we can merge across sub-scatterings
+                if (!mergeAcrossSubscatterings && iTag != jTag) continue;
+                
+                // Check if target sub-scattering should be processed
+                if (!shouldProcessSubscattering(jTag)) continue;
+                
+                if (gluons[i]->deltaR(*gluons[j]) < deltaRThreshold) {
+                    // Merge gluon j into gluon i
+                    gluons[i]->px += gluons[j]->px;
+                    gluons[i]->py += gluons[j]->py;
+                    gluons[i]->pz += gluons[j]->pz;
+                    gluons[i]->energy += gluons[j]->energy;
+                    
+                    // Mark for removal
+                    gluons[j]->status = 0;
+                    merged[j] = true;
+                }
+            }
+        }
+        
+        // Remove merged gluons
+        event.particles.erase(
+            std::remove_if(event.particles.begin(), event.particles.end(),
+                          [](const Particle& p) { return p.status == 0; }),
+            event.particles.end()
+        );
+        
+        // Update particle count
+        event.nParticles = static_cast<int>(event.particles.size());
+    }
+    
+private:
+    int getSubScatteringTag(size_t particleIdx, const std::map<int, int>& tags) const {
+        auto it = tags.find(static_cast<int>(particleIdx));
+        return (it != tags.end()) ? it->second : 0;
+    }
+    
+    bool shouldProcessSubscattering(int tag) const {
+        if (subscatteringsToMerge.empty()) return true;  // Process all if not specified
+        return std::find(subscatteringsToMerge.begin(), 
+                        subscatteringsToMerge.end(), tag) != subscatteringsToMerge.end();
+    }
+};
+
+/**
+ * LHE Event Mixer with advanced recipe support
  */
 class LHEMixer {
 public:
@@ -350,13 +474,28 @@ public:
         double gluonMergeThreshold = 0.4;
         unsigned int randomSeed = 42;
         size_t maxEvents = 0;  // 0 = all events
+        
+        // Advanced mixing options
+        MixRecipe recipe;                    // Custom mix recipe (if set, overrides inputFiles)
+        bool useRecipe = false;              // Whether to use recipe-based mixing
+        std::vector<int> gluonMergeSubscatterings;  // Which sub-scatterings to merge gluons
+        bool mergeGluonsAcrossSubscatterings = false;
     };
     
     LHEMixer(const Config& config) : config_(config), rng_(config.randomSeed) {}
     
     // Run the mixing process
     void run() {
-        // Load all input files
+        if (config_.useRecipe && !config_.recipe.sources.empty()) {
+            runWithRecipe();
+        } else {
+            runSimple();
+        }
+    }
+    
+private:
+    // Simple mixing: concatenate all events from all files
+    void runSimple() {
         std::vector<Event> allEvents;
         LHEFile firstFile;
         
@@ -365,32 +504,30 @@ public:
             lhe.read(config_.inputFiles[i]);
             
             if (i == 0) {
-                firstFile = lhe;  // Keep header and init from first file
+                firstFile = lhe;
             }
             
             allEvents.insert(allEvents.end(), 
                            lhe.events.begin(), lhe.events.end());
         }
         
-        // Shuffle if requested
         if (config_.shuffle) {
             std::shuffle(allEvents.begin(), allEvents.end(), rng_);
         }
         
-        // Limit events if specified
         if (config_.maxEvents > 0 && allEvents.size() > config_.maxEvents) {
             allEvents.resize(config_.maxEvents);
         }
         
-        // Merge gluons if requested
         if (config_.mergeGluons) {
-            GluonMerger merger(config_.gluonMergeThreshold);
+            AdvancedGluonMerger merger(config_.gluonMergeThreshold);
+            merger.setSubscatterings(config_.gluonMergeSubscatterings);
+            merger.mergeAcrossSubscatterings = config_.mergeGluonsAcrossSubscatterings;
             for (auto& event : allEvents) {
                 merger.mergeGluons(event);
             }
         }
         
-        // Write output
         LHEFile output;
         output.header = firstFile.header;
         output.initBlock = firstFile.initBlock;
@@ -398,7 +535,102 @@ public:
         output.write(config_.outputFile);
     }
     
-private:
+    // Recipe-based mixing: take N events from each source per output event
+    void runWithRecipe() {
+        // Load all source files
+        std::map<std::string, std::vector<Event>> sourceEvents;
+        std::map<std::string, size_t> sourceIndices;
+        LHEFile firstFile;
+        bool firstLoaded = false;
+        
+        for (const auto& source : config_.recipe.sources) {
+            LHEFile lhe;
+            lhe.read(source.first);
+            
+            if (!firstLoaded) {
+                firstFile = lhe;
+                firstLoaded = true;
+            }
+            
+            // Shuffle source events
+            if (config_.shuffle) {
+                std::shuffle(lhe.events.begin(), lhe.events.end(), rng_);
+            }
+            
+            sourceEvents[source.first] = std::move(lhe.events);
+            sourceIndices[source.first] = 0;
+        }
+        
+        // Determine max number of combined events we can produce
+        size_t maxCombined = SIZE_MAX;
+        for (const auto& source : config_.recipe.sources) {
+            size_t available = sourceEvents[source.first].size() / source.second;
+            maxCombined = std::min(maxCombined, available);
+        }
+        
+        if (config_.maxEvents > 0) {
+            maxCombined = std::min(maxCombined, config_.maxEvents);
+        }
+        
+        // Generate combined events
+        std::vector<Event> combinedEvents;
+        combinedEvents.reserve(maxCombined);
+        
+        for (size_t i = 0; i < maxCombined; ++i) {
+            Event combined;
+            combined.processId = 0;
+            combined.weight = 1.0;
+            combined.scale = 0;
+            combined.alphaQED = 0;
+            combined.alphaQCD = 0;
+            
+            std::map<int, int> subScatteringTags;
+            int subScatteringIdx = 0;
+            int particleOffset = 0;
+            
+            // Combine events from each source
+            for (const auto& source : config_.recipe.sources) {
+                for (size_t j = 0; j < source.second; ++j) {
+                    size_t& idx = sourceIndices[source.first];
+                    const Event& srcEvent = sourceEvents[source.first][idx++];
+                    
+                    // Add particles with sub-scattering tag
+                    for (const auto& p : srcEvent.particles) {
+                        combined.particles.push_back(p);
+                        subScatteringTags[particleOffset++] = subScatteringIdx;
+                    }
+                    
+                    // Accumulate properties
+                    combined.weight *= srcEvent.weight;
+                    if (combined.scale == 0) combined.scale = srcEvent.scale;
+                    if (combined.alphaQED == 0) combined.alphaQED = srcEvent.alphaQED;
+                    if (combined.alphaQCD == 0) combined.alphaQCD = srcEvent.alphaQCD;
+                    
+                    subScatteringIdx++;
+                }
+            }
+            
+            combined.nParticles = static_cast<int>(combined.particles.size());
+            
+            // Apply gluon merging with sub-scattering awareness
+            if (config_.mergeGluons) {
+                AdvancedGluonMerger merger(config_.gluonMergeThreshold);
+                merger.setSubscatterings(config_.gluonMergeSubscatterings);
+                merger.mergeAcrossSubscatterings = config_.mergeGluonsAcrossSubscatterings;
+                merger.mergeGluons(combined, subScatteringTags);
+            }
+            
+            combinedEvents.push_back(std::move(combined));
+        }
+        
+        // Write output
+        LHEFile output;
+        output.header = firstFile.header;
+        output.initBlock = firstFile.initBlock;
+        output.events = std::move(combinedEvents);
+        output.write(config_.outputFile);
+    }
+    
     Config config_;
     std::mt19937 rng_;
 };

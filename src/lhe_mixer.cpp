@@ -43,7 +43,13 @@ void printUsage(const char* progname) {
               << "  --max-events N                Maximum events to process (0 = all)\n"
               << "  --seed N                      Random seed (default: 42)\n"
               << "  --config FILE                 Load options from JSON config file\n"
-              << "  --help, -h                    Show this help message\n"
+              << "  --help, -h                    Show this help message\n\n"
+              << "Advanced mixing options:\n"
+              << "  --recipe SPEC                 Mix recipe: 'fileA:3,fileB:1' means 3 from A, 1 from B\n"
+              << "                                per output event (for QPS, TPS, etc.)\n"
+              << "  --merge-subscatterings IDX    Comma-separated sub-scattering indices to merge gluons\n"
+              << "                                (0-indexed, e.g., '0,2' merges in 1st and 3rd)\n"
+              << "  --merge-across                Allow gluon merging across sub-scatterings\n"
               << std::endl;
 }
 
@@ -69,9 +75,24 @@ bool ensureDirectory(const std::string& path) {
     return mkdir(path.c_str(), 0755) == 0;
 }
 
+// Parse comma-separated integers
+std::vector<int> parseIntList(const std::string& str) {
+    std::vector<int> result;
+    std::stringstream ss(str);
+    std::string item;
+    while (std::getline(ss, item, ',')) {
+        if (!item.empty()) {
+            result.push_back(std::stoi(item));
+        }
+    }
+    return result;
+}
+
 // Command: mix
 int cmdMix(int argc, char* argv[]) {
     LHEMixer::Config config;
+    std::string recipeStr;
+    std::string subscatteringsStr;
     
     static struct option long_options[] = {
         {"inputs", required_argument, 0, 'i'},
@@ -81,12 +102,15 @@ int cmdMix(int argc, char* argv[]) {
         {"delta-r", required_argument, 0, 'r'},
         {"max-events", required_argument, 0, 'n'},
         {"seed", required_argument, 0, 'S'},
+        {"recipe", required_argument, 0, 'R'},
+        {"merge-subscatterings", required_argument, 0, 'M'},
+        {"merge-across", no_argument, 0, 'A'},
         {"help", no_argument, 0, 'h'},
         {0, 0, 0, 0}
     };
     
     int opt;
-    while ((opt = getopt_long(argc, argv, "i:o:sgr:n:S:h", long_options, nullptr)) != -1) {
+    while ((opt = getopt_long(argc, argv, "i:o:sgr:n:S:R:M:Ah", long_options, nullptr)) != -1) {
         switch (opt) {
             case 'i':
                 config.inputFiles = splitString(optarg);
@@ -109,6 +133,18 @@ int cmdMix(int argc, char* argv[]) {
             case 'S':
                 config.randomSeed = std::stoul(optarg);
                 break;
+            case 'R':
+                recipeStr = optarg;
+                config.useRecipe = true;
+                config.recipe = MixRecipe::parse(recipeStr);
+                break;
+            case 'M':
+                subscatteringsStr = optarg;
+                config.gluonMergeSubscatterings = parseIntList(subscatteringsStr);
+                break;
+            case 'A':
+                config.mergeGluonsAcrossSubscatterings = true;
+                break;
             case 'h':
                 printUsage("lhe_mixer mix");
                 return 0;
@@ -117,8 +153,9 @@ int cmdMix(int argc, char* argv[]) {
         }
     }
     
-    if (config.inputFiles.empty()) {
-        std::cerr << "Error: No input files specified\n";
+    // Either inputs or recipe must be specified
+    if (config.inputFiles.empty() && !config.useRecipe) {
+        std::cerr << "Error: No input files or recipe specified\n";
         return 1;
     }
     
@@ -127,10 +164,30 @@ int cmdMix(int argc, char* argv[]) {
         return 1;
     }
     
-    std::cout << "LHE Mixer - Mixing " << config.inputFiles.size() << " files\n";
+    if (config.useRecipe) {
+        std::cout << "LHE Mixer - Recipe-based mixing\n";
+        std::cout << "  Recipe: " << recipeStr << "\n";
+        std::cout << "  Sources:\n";
+        for (const auto& s : config.recipe.sources) {
+            std::cout << "    - " << s.first << ": " << s.second << " events per output\n";
+        }
+    } else {
+        std::cout << "LHE Mixer - Mixing " << config.inputFiles.size() << " files\n";
+    }
     std::cout << "  Output: " << config.outputFile << "\n";
     std::cout << "  Shuffle: " << (config.shuffle ? "yes" : "no") << "\n";
     std::cout << "  Merge gluons: " << (config.mergeGluons ? "yes" : "no") << "\n";
+    if (config.mergeGluons && !config.gluonMergeSubscatterings.empty()) {
+        std::cout << "  Merge subscatterings: ";
+        for (size_t i = 0; i < config.gluonMergeSubscatterings.size(); ++i) {
+            if (i > 0) std::cout << ",";
+            std::cout << config.gluonMergeSubscatterings[i];
+        }
+        std::cout << "\n";
+    }
+    if (config.mergeGluonsAcrossSubscatterings) {
+        std::cout << "  Merge across subscatterings: yes\n";
+    }
     
     try {
         LHEMixer mixer(config);

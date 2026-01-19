@@ -155,11 +155,30 @@ submission:
 - **Single HTCondor job** processes multiple seeds instead of thousands of separate jobs
 - Automatic LHE harvesting from EOS (up to ~10GB files)
 - Configurable seed range and physics parameters
+- **Flexible output handling**: Automatically finds LHE files in various HELAC output locations
+  (`PROC_HO_*/P0_*/output/sample*.lhe`, `sample*py8.lhe`, etc.)
 
 ### 2. High-Performance LHE Processing (C++)
 - Two-tier split and shuffle for large event samples
-- C++ event mixer for DPS/TPS topology generation (requirement 6)
+- C++ event mixer for DPS/TPS/QPS topology generation (requirement 6)
+- **Advanced mix recipes**: Specify counts per source, e.g., "3 from A, 1 from B" for QPS
+- **Selective gluon merging**: Specify which sub-scatterings to merge gluons in
 - Gluon merging with configurable ΔR threshold
+
+#### Mix Recipe Examples
+```bash
+# Simple DPS: 1 event from each source
+./bin/lhe_mixer mix --recipe "jpsi.lhe:1,upsilon.lhe:1" -o dps.lhe
+
+# TPS: J/psi + J/psi + gg
+./bin/lhe_mixer mix --recipe "jpsi.lhe:2,gg.lhe:1" -o tps.lhe
+
+# QPS: J/psi + J/psi + J/psi + phi (3 from source A, 1 from B)
+./bin/lhe_mixer mix --recipe "jpsi.lhe:3,phi.lhe:1" -o qps.lhe --merge-gluons
+
+# Selective gluon merging (only in sub-scatterings 0 and 2)
+./bin/lhe_mixer mix --recipe "a.lhe:2,b.lhe:1" -o out.lhe --merge-gluons --merge-subscatterings 0,2
+```
 
 ### 3. Flexible Showering
 - Normal Pythia 8 showering

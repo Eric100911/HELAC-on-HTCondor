@@ -53,6 +53,45 @@ fi
 # Collect output files
 mkdir -p output
 
+# Function to find LHE output file (handles various HELAC output locations)
+find_lhe_output() {
+    local seed=$1
+    
+    # Check multiple possible output locations:
+    # 1. Direct output in working directory
+    # 2. PROC_HO_*/P0_*/output/sample*.lhe (standard HELAC location)
+    # 3. PROC_HO_*/P0_*/output/sample*py8.lhe (Pythia8 interface output)
+    
+    # First, check working directory
+    if [ -f "sample_pp_nonia_mps.lhe" ]; then
+        echo "sample_pp_nonia_mps.lhe"
+        return 0
+    fi
+    
+    # Search in HELAC output directories
+    local lhe_file=""
+    
+    # Try various patterns in PROC_HO_* directories
+    for pattern in "PROC_HO_*/P0_*/output/sample*.lhe" \
+                   "PROC_HO_*/P0_*/output/sample*py8.lhe" \
+                   "HELAC-Onia-*/PROC_HO_*/P0_*/output/sample*.lhe" \
+                   "HELAC-Onia-*/PROC_HO_*/P0_*/output/sample*py8.lhe"; do
+        lhe_file=$(find . -path "./$pattern" -type f 2>/dev/null | head -n 1)
+        if [ -n "$lhe_file" ]; then
+            echo "$lhe_file"
+            return 0
+        fi
+    done
+    
+    # Also check if helac_build_run.sh copied to workdir with seed suffix
+    if [ -f "sample_pp_nonia_mps_${seed}.lhe" ]; then
+        echo "sample_pp_nonia_mps_${seed}.lhe"
+        return 0
+    fi
+    
+    return 1
+}
+
 # Run for each seed (after initial build)
 for seed in $(seq $START_SEED $END_SEED); do
     log_info "Processing seed: ${seed}"
@@ -66,12 +105,14 @@ for seed in $(seq $START_SEED $END_SEED); do
         continue
     fi
     
-    # Move LHE file to output directory
-    if [ -f sample_pp_nonia_mps.lhe ]; then
-        mv sample_pp_nonia_mps.lhe output/sample_pp_nonia_mps_${seed}.lhe
-        log_ok "Generated LHE for seed ${seed}"
+    # Find and move LHE file to output directory
+    LHE_FILE=$(find_lhe_output ${seed})
+    if [ -n "$LHE_FILE" ] && [ -f "$LHE_FILE" ]; then
+        mv "$LHE_FILE" output/sample_pp_nonia_mps_${seed}.lhe
+        log_ok "Generated LHE for seed ${seed}: $LHE_FILE"
     else
         log_error "LHE file not found for seed ${seed}"
+        log_info "Searched patterns: sample*.lhe, PROC_HO_*/P0_*/output/sample*.lhe"
     fi
 done
 
