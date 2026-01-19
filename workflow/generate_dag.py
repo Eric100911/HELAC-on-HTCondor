@@ -143,6 +143,7 @@ Queue 1
         condor_cfg = self.config.get('submission', {}).get('condor', {})
         
         self.sub_files['matrix_element.sub'] = f"""# Matrix Element Generation - Individual Jobs
+# Uses the main.sh wrapper which calls helac_build_run.sh
 Universe = vanilla
 Executable = main.sh
 Arguments = $(seed)

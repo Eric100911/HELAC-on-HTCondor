@@ -117,7 +117,7 @@ EOF
 generate_dagman() {
     log_info "Generating DAGman workflow..."
     
-    python3 workflow/generate_dag.py "$CONFIG_FILE" --output workflow/generated.dag
+    python3 workflow/generate_dag.py "$CONFIG_FILE" --output workflow/
     
     if [ -f "workflow/generated.dag" ]; then
         log_success "DAGman workflow generated: workflow/generated.dag"

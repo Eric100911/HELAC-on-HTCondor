@@ -17,6 +17,7 @@
 #include <getopt.h>
 #include <cstdlib>
 #include <sys/stat.h>
+#include <unistd.h>
 
 using namespace lhe;
 
