@@ -104,7 +104,21 @@ HELAC-on-HTCondor/
 
 ## Quick Start
 
-### 1. Configure Workflow
+### 1. Setup and Build
+
+```bash
+# Clone the repository
+git clone https://github.com/Eric100911/HELAC-on-HTCondor.git
+cd HELAC-on-HTCondor
+
+# Build C++ tools (LHE mixer, Pythia8 shower)
+make tools
+
+# Run tests to verify installation
+make test
+```
+
+### 2. Configure Workflow
 
 Copy and edit the example configuration:
 
@@ -183,12 +197,16 @@ submission:
 ### 3. Flexible Showering
 - Normal Pythia 8 showering
 - Phi-enriched mode with repeated attempts for hard φ meson production
+- **Standalone Pythia 8 implementation** (not via cmsRun) - requirement fulfilled
+- **Upsilon decay settings**: 553, 100553, 200553 → μ+μ- properly configured
+- **CP5 tuning as default**, or user-specified tuning
 - HepMC output preservation for color octet states
 
 ### 4. Automatic File Management
-- Intermediate files automatically deleted after use
+- Intermediate files automatically deleted after use (via cleanup job in DAGman)
 - Preserves: LHE, HepMC, MiniAOD, Ntuple files
 - Configurable per-step retention policy
+- **CMSSW setup uses** `scram project -n` **for safety** (not `cmsrel`)
 
 ### 5. Extensible Architecture
 - YAML-based workflow configuration
@@ -199,34 +217,169 @@ submission:
 ## Building C++ Tools
 
 ```bash
-# Ensure CMSSW environment is set up
+# Build all tools
+make tools
+
+# Or build individually
+make bin/lhe_mixer          # LHE event mixer
+make bin/pythia8_shower     # Standalone Pythia8 shower
+```
+
+### Prerequisites
+
+For Pythia8 shower tool, ensure CMSSW environment is set up:
+```bash
+source /cvmfs/cms.cern.ch/cmsset_default.sh
+cd CMSSW_*/src && cmsenv && cd -
+```
+
+## Testing
+
+Comprehensive test suite is available for all components:
+
+```bash
+# Run all tests
+make test
+
+# Run specific test categories
+make test-unit              # Unit tests only
+make test-integration       # Integration tests only
+make test-verbose           # Verbose output
+
+# Or use the test runner directly
+./run_tests.sh --all        # All tests
+./run_tests.sh --unit       # Unit tests
+./run_tests.sh --integration # Integration tests
+```
+
+Test reports are automatically generated in `test_reports/` with HTML summaries.
+See [TESTING.md](TESTING.md) for detailed testing documentation.
+
+## Key Features (Detailed)
+
+### 1. Efficient Matrix Element Generation
+
+## Enhanced Features
+
+### Flexible HELAC-Onia Output Handling
+
+The workflow now automatically searches for LHE files in various HELAC output locations:
+
+1. **Priority for Pythia8-ready files**: `*_py8.lhe` files are preferred
+2. **Multiple output patterns**: Searches in `P0_calc_*`, `P0_addon_*`, `P0_*` subdirectories
+3. **Newest file selection**: When multiple `sample*.lhe` files exist, picks the newest
+4. **Fallback search**: Falls back to any `.lhe` file if specific patterns not found
+
+This flexibility ensures the workflow works with different HELAC-Onia configurations and add-ons.
+
+### Advanced LHE Mixing Recipes
+
+Support for complex multi-parton scattering topologies:
+
+```bash
+# Simple DPS: 1 event from each source
+./bin/lhe_mixer mix --recipe "jpsi.lhe:1,upsilon.lhe:1" -o dps.lhe
+
+# TPS: J/ψ + J/ψ + gg
+./bin/lhe_mixer mix --recipe "jpsi.lhe:2,gg.lhe:1" -o tps.lhe
+
+# QPS: 3 J/ψ + 1 φ (Quadruple Parton Scattering)
+./bin/lhe_mixer mix --recipe "jpsi.lhe:3,phi.lhe:1" -o qps.lhe
+
+# With selective gluon merging (only in sub-scatterings 0 and 2)
+./bin/lhe_mixer mix --recipe "a.lhe:2,b.lhe:1" -o out.lhe \
+  --merge-gluons --merge-subscatterings 0,2
+```
+
+### Standalone Pythia 8 Showering
+
+Fully standalone Pythia 8 implementation (not via cmsRun):
+
+```bash
+# Basic usage
+./bin/pythia8_shower --input events.lhe --output events.hepmc
+
+# With CP5 tuning (default)
+./bin/pythia8_shower --input events.lhe --output events.hepmc --tune CP5
+
+# Phi-enriched mode
+./bin/pythia8_shower --input events.lhe --output events.hepmc \
+  --mode phi --max-phi-attempts 100
+
+# Color-octet mode for charmonium/bottomonium
+./bin/pythia8_shower --input events.lhe --output events.hepmc \
+  --mode color-octet
+```
+
+Features:
+- **Upsilon decays**: Properly configured for 553, 100553, 200553 → μ+μ-
+- **CP5 tuning**: Default tuning, or specify Monash2013, 4C
+- **Phi enrichment**: Repeated showering for hard φ meson production
+- **Color octets**: Special handling for color octet states
+
+### External LHE Input Support
+
+The workflow supports external LHE files from other generators:
+
+```yaml
+# In workflow_config.yaml
+matrix_element:
+  external_lhe:
+    enabled: true
+    sources:
+      - path: /path/to/external_jpsi.lhe
+        post_process: true  # Apply splitting/shuffling
+      - path: /path/to/external_upsilon.lhe
+        post_process: false # Use as-is
+```
+
+Large external LHE files are automatically split if needed.
+
+## Troubleshooting
+
+### Build Issues
+
+**Pythia8 shower build fails:**
+```bash
+# Ensure CMSSW environment is set
 source /cvmfs/cms.cern.ch/cmsset_default.sh
 cd CMSSW_*/src && cmsenv && cd -
 
-# Build LHE mixer
-g++ -std=c++17 -O2 src/lhe_mixer.cpp -o bin/lhe_mixer
+# Check environment variables
+echo $PYTHIA8
+echo $HEPMC_DIR
 
-# Build HepMC mixer (requires HepMC2 and HepMC3)
-g++ -std=c++17 -O2 src/hepmc_mixer.cpp -o bin/hepmc_mixer \
-    -I$HEPMC3/include -I$HEPMC2/include \
-    -L$HEPMC3/lib64 -L$HEPMC2/lib \
-    -lHepMC3 -lHepMC
+# If not set, set manually or use different CMSSW version
 ```
 
-## Configuration Reference
+**LHE mixer build fails:**
+```bash
+# Requires C++17 compiler
+g++ --version  # Should be >= 7.0
 
-See `workflow/workflow_config.yaml.example` for complete documentation of all
-configuration options including:
-- Matrix element settings (seeds, physics cuts, generator options)
-- Preprocessing (split sizes, mixing sources, gluon merging)
-- Showering (modes, HepMC retention, phi enrichment)
-- Simulation chain (CMSSW versions, era configs, file retention)
-- Submission (HTCondor/CRAB options)
+# Build manually
+cd src
+g++ -std=c++17 -O2 lhe_mixer.cpp -o ../bin/lhe_mixer
+```
 
-## Authors
+### Workflow Issues
 
-- MC Production Team
+**No LHE files found:**
+Check the HELAC output directories manually:
+```bash
+find . -name "*.lhe" -type f
+```
 
-## License
+The improved scripts search multiple patterns automatically.
 
-This project is available for scientific use.
+**Tests failing:**
+```bash
+# Run with verbose output
+./run_tests.sh --all --verbose
+
+# Check specific test
+cd tests/unit
+python3 test_lhe_mixer.py -v
+```
+
+For more help, see [TESTING.md](TESTING.md) for comprehensive testing documentation.

@@ -135,12 +135,48 @@ fi
 RUN_DIR=$(egrep "INFO: Results are collected in" ../run_HELAC.log | \
             sed -r -e "s,^.*(PROC_HO_[0-9]+)\/.*$,\1,g")
 
-# - Copy the resulting LHE file to the current directory.
-if [ -f "$RUN_DIR/P0_addon_pp_NOnia_MPS/output/sample_pp_nonia_mps.lhe" ]; then
-    cp "$RUN_DIR/P0_addon_pp_NOnia_MPS/output/sample_pp_nonia_mps.lhe" "$WORKDIR/sample_pp_nonia_mps.lhe"
+# Search for LHE files in all P0_* subdirectories (requirement: flexible output handling)
+# Priority: 1) *_py8.lhe files, 2) newest sample*.lhe file
+echo "Searching for LHE files in $RUN_DIR/P0_*/"
+
+# First, try to find *_py8.lhe files
+PY8_LHE=$(find "$RUN_DIR"/P0_*/output -name "*_py8.lhe" -type f 2>/dev/null | head -n1)
+
+if [ -n "$PY8_LHE" ] && [ -f "$PY8_LHE" ]; then
+    echo "Found Pythia8-ready LHE: $PY8_LHE"
+    OUTPUT_LHE="$PY8_LHE"
 else
-    echo "Error: No output LHE file found in $RUN_DIR/P0_addon_pp_NOnia_MPS/output/"
-    exit 1
+    # If no *_py8.lhe, find the newest sample*.lhe file
+    echo "No *_py8.lhe found, searching for sample*.lhe files..."
+    SAMPLE_LHE=$(find "$RUN_DIR"/P0_*/output -name "sample*.lhe" -type f 2>/dev/null | \
+                 xargs ls -t 2>/dev/null | head -n1)
+    
+    if [ -n "$SAMPLE_LHE" ] && [ -f "$SAMPLE_LHE" ]; then
+        echo "Found LHE file: $SAMPLE_LHE"
+        OUTPUT_LHE="$SAMPLE_LHE"
+    else
+        # Last resort: any .lhe file in output directories
+        echo "No sample*.lhe found, searching for any .lhe files..."
+        ANY_LHE=$(find "$RUN_DIR"/P0_*/output -name "*.lhe" -type f 2>/dev/null | \
+                  xargs ls -t 2>/dev/null | head -n1)
+        
+        if [ -n "$ANY_LHE" ] && [ -f "$ANY_LHE" ]; then
+            echo "Found LHE file: $ANY_LHE"
+            OUTPUT_LHE="$ANY_LHE"
+        else
+            echo "Error: No LHE files found in $RUN_DIR/P0_*/output/"
+            echo "Searched patterns: *_py8.lhe, sample*.lhe, *.lhe"
+            exit 1
+        fi
+    fi
 fi
+
+# Extract output filename
+OUTPUT_BASENAME=$(basename "$OUTPUT_LHE")
+echo "Copying $OUTPUT_LHE to $WORKDIR/$OUTPUT_BASENAME"
+cp "$OUTPUT_LHE" "$WORKDIR/$OUTPUT_BASENAME"
+
+# Create a symlink with standard name for downstream processing
+ln -sf "$OUTPUT_BASENAME" "$WORKDIR/sample_pp_nonia_mps.lhe"
 
 cd "$WORKDIR"
