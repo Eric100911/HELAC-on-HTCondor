@@ -45,7 +45,9 @@ done
 
 if [ -z "$CMSSW_BASE_DIR" ]; then
     log_info "Setting up new CMSSW area..."
-    cmsrel ${CMSSW_VERSION}
+    # Use 'scram project -n' instead of 'cmsrel' for safety (requirement)
+    # This allows specifying custom directory name and is safer for automation
+    scram project -n ${CMSSW_VERSION} CMSSW ${CMSSW_VERSION}
     CMSSW_BASE_DIR="./${CMSSW_VERSION}"
 fi
 

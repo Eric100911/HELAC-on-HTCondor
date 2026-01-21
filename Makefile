@@ -17,7 +17,7 @@ HEPMC2_DIR ?= $(shell echo $$HEPMC_DIR)
 HEPMC3_DIR ?= $(shell echo $$HEPMC3_DIR)
 
 # Phony targets
-.PHONY: all submit dryrun workflow workflow-dryrun tools clean help
+.PHONY: all submit dryrun workflow workflow-dryrun tools clean help test test-unit test-integration
 
 # Default target
 all: tools
@@ -29,6 +29,9 @@ help:
 	@echo "  make workflow      - Generate and submit DAGman workflow"
 	@echo "  make workflow-dryrun - Dry run of DAGman workflow"
 	@echo "  make tools         - Build C++ tools"
+	@echo "  make test          - Run all tests"
+	@echo "  make test-unit     - Run unit tests only"
+	@echo "  make test-integration - Run integration tests only"
 	@echo "  make clean         - Clean build artifacts"
 
 # =============================================================================
@@ -122,3 +125,23 @@ clean:
 
 distclean: clean
 	rm -rf sources/
+
+# =============================================================================
+# Testing
+# =============================================================================
+
+test: tools
+	@echo "Running all tests..."
+	./run_tests.sh --all
+
+test-unit: tools
+	@echo "Running unit tests..."
+	./run_tests.sh --unit
+
+test-integration: tools
+	@echo "Running integration tests..."
+	./run_tests.sh --integration
+
+test-verbose: tools
+	@echo "Running all tests (verbose)..."
+	./run_tests.sh --all --verbose
