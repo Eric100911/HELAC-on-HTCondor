@@ -45,6 +45,20 @@ matrix_element:
     output_pattern: "sample_pp_nonia_mps_{seed}.lhe"
     destination: "{output_dir}/LHE"
     max_file_size_gb: 10
+  
+  # External LHE file support (requirement 6)
+  external_lhe:
+    enabled: false
+    sources:
+      - path: "/path/to/external_jpsi.lhe"
+        label: "jpsi_external"
+        post_process: true      # Apply splitting/shuffling
+        auto_split: true        # Auto-split if > threshold
+        split_threshold_mb: 1000
+      - path: "/path/to/external_upsilon.lhe"
+        label: "upsilon_external"  
+        post_process: false     # Use as-is
+        auto_split: false
 
 # LHE preprocessing settings (requirement 2)
 lhe_preprocessing:
@@ -56,35 +70,62 @@ lhe_preprocessing:
     tier2_size: 1000   # events per subfile
     shuffle: true
     
-  # Event mixing settings
+  # Event mixing settings (requirement: advanced recipes)
   mixing:
     enabled: false
+    # Simple sources list (legacy mode)
     sources: []  # List of LHE file patterns to mix
     output_file: "mixed_events.lhe"
     
-  # Gluon merging
+    # Advanced mix recipes (requirement: "3 from A, 1 from B" for QPS)
+    # Examples:
+    #   DPS: "jpsi.lhe:1,upsilon.lhe:1"
+    #   TPS: "jpsi.lhe:2,gg.lhe:1"
+    #   QPS: "jpsi.lhe:3,phi.lhe:1"
+    recipe: ""
+    
+  # Gluon merging (requirement: selective sub-scattering merging)
   gluon_merging:
     enabled: false
     merge_distance: 0.4  # Delta R threshold
+    # Specify which sub-scatterings to merge gluons in (0-indexed)
+    # Example: [0, 2] merges gluons in 1st and 3rd sub-scatterings only
+    merge_subscatterings: []  # Empty = merge in all
+    merge_across_subscatterings: false  # Allow merging across sub-scatterings
 
-# Showering settings (requirement 3)
+# Showering settings (requirement 3: standalone Pythia8, CP5, Upsilon decays)
 showering:
   enabled: true
   generator: "pythia8"
   version: "8.3"
   
+  # Standalone Pythia8 (requirement: not via cmsRun)
+  standalone: true
+  executable: "bin/pythia8_shower"
+  
+  # Tuning (requirement: CP5 default, or external input)
+  tuning: "CP5"  # Options: CP5, Monash2013, 4C
+  
   # For color octet states, keep HepMC
   color_octet:
     enabled: false
     keep_hepmc: true
+    mode: "color-octet"
     
-  # For phi meson production
+  # For phi meson production (requirement: repeated showering)
   phi_meson:
-    repeated_showering: false
+    enabled: false
+    mode: "phi"
+    repeated_showering: true
     max_attempts: 100
+  
+  # Upsilon decay settings (requirement: 553, 100553, 200553 → μ+μ-)
+  # These are automatically configured in standalone Pythia8 shower
+  upsilon_decays:
+    force_muon_decay: true  # Forces Υ(1S,2S,3S) → μ+μ-
     
   pythia_config:
-    tune: "Monash2013"
+    tune: "CP5"  # Will be overridden by 'tuning' above
     process_string: ""  # Auto-generated from LHE
 
 # CMS simulation workflow (requirement 4)
