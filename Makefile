@@ -86,12 +86,37 @@ workflow/workflow_config.yaml: workflow/workflow_config.yaml.example
 # C++ Tools
 # =============================================================================
 
-tools: bin/lhe_mixer
+tools: bin/lhe_mixer bin/pythia8_shower
 
 bin/lhe_mixer: src/lhe_mixer.cpp src/lhe_mixer.hpp
 	mkdir -p bin
 	$(CXX) $(CXXFLAGS) -o $@ src/lhe_mixer.cpp $(LDFLAGS)
 	@echo "Built lhe_mixer"
+
+# Standalone Pythia 8 shower (requirement: not via cmsRun)
+bin/pythia8_shower: src/pythia8_shower.cpp
+	@echo "Building standalone Pythia8 shower..."
+	@if [ -z "$(PYTHIA8)" ]; then \
+		echo "Error: PYTHIA8 environment variable not set"; \
+		echo "  Source CMSSW environment or set PYTHIA8 path manually"; \
+		echo "  Example: export PYTHIA8=/cvmfs/cms.cern.ch/slc7_amd64_gcc900/external/pythia8/244-ghbfee"; \
+		exit 1; \
+	fi
+	@if [ -z "$(HEPMC_DIR)" ] && [ -z "$(HEPMC2_DIR)" ]; then \
+		echo "Error: HEPMC_DIR or HEPMC2_DIR must be set"; \
+		echo "  Source CMSSW environment or set path manually"; \
+		exit 1; \
+	fi
+	mkdir -p bin
+	$(CXX) $(CXXFLAGS) -o $@ src/pythia8_shower.cpp \
+		-I$(PYTHIA8)/include \
+		-I$(or $(HEPMC_DIR),$(HEPMC2_DIR))/include \
+		-L$(PYTHIA8)/lib \
+		-L$(or $(HEPMC_DIR),$(HEPMC2_DIR))/lib \
+		-Wl,-rpath,$(PYTHIA8)/lib \
+		-Wl,-rpath,$(or $(HEPMC_DIR),$(HEPMC2_DIR))/lib \
+		-lpythia8 -lHepMC
+	@echo "Built pythia8_shower"
 
 # HepMC mixer requires HepMC2 and HepMC3 libraries
 bin/hepmc_mixer: src/hepmc_mixer.cpp
