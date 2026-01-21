@@ -1,13 +1,43 @@
+# Build artifacts
 HELAC-Onia-2.7.6/
 HepMC/
 sources/
 log/
 PROC_HO_*/
+bin/
+
+# Generated files
 seeds.txt
+workflow/generated.dag
+workflow/generated.dag.*
+workflow/*.sub
+workflow/config/dagman.config
+dryrun*.log
+_codeql_detected_source_root
+
+# Data files
 *.lhe
 *.root
+*.hepmc
+
+# Configuration (generated from template)
+workflow/workflow_config.yaml
+
+# HELAC output
 *.ho
-*.log
+
+# Archives
 *.tar
 *.tgz
 *.tar.gz
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Editor
+*.swp
+*~
+.vscode/
+.idea/

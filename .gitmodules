@@ -1,0 +1,16 @@
+[submodule "external/Full_MC_Production"]
+	path = external/Full_MC_Production
+	url = https://github.com/Endymion2288/Full_MC_Production.git
+	branch = main
+[submodule "external/LHE-two-tier-split"]
+	path = external/LHE-two-tier-split
+	url = https://github.com/Eric100911/LHE-two-tier-split.git
+	branch = main
+[submodule "external/LHEventFastMixer"]
+	path = external/LHEventFastMixer
+	url = https://github.com/Eric100911/LHEventFastMixer.git
+	branch = main
+[submodule "external/Ntuplizer-on-HTCondor"]
+	path = external/Ntuplizer-on-HTCondor
+	url = https://github.com/Eric100911/Ntuplizer-on-HTCondor.git
+	branch = main

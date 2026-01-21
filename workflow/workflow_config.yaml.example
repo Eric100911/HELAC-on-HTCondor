@@ -1,0 +1,173 @@
+# Monte Carlo Simulation Workflow Configuration
+# This file configures the integrated workflow for particle physics simulations
+
+workflow:
+  name: "JpsiJpsiUpsilon_TPS"
+  description: "Triple J/psi + Upsilon production via MPS"
+  output_dir: "/eos/user/c/chiw/JpsiJpsiUps/MC_samples"
+  temp_dir: "/tmp/mc_workflow"
+
+# Matrix element generation settings
+matrix_element:
+  generator: "helac-onia"
+  version: "2.7.6"
+  
+  # Use single condor job for all seeds (requirement 1)
+  batch_mode: "single_job"
+  seeds:
+    start: 11
+    end: 100
+  
+  # HELAC-Onia specific settings
+  helac:
+    addon: "pp_NOnia_MPS"
+    config_template: "configs/run_HELAC.ho.tpl"
+    states: [1, 1, 3]  # J/psi, J/psi, Upsilon(1S)
+    
+    physics:
+      cmass: 1.54845
+      bmass: 4.73020
+      beam_energy: 6800  # GeV per beam
+      
+    generation:
+      preunw: 3000000
+      unwevt: 1000000000
+      nmc: 200000000
+      nopt: 20000000
+      
+    cuts:
+      minptconia: 2.0
+      minptbonia: 2.0
+  
+  # Automatic harvesting (requirement 1)
+  harvest:
+    enabled: true
+    output_pattern: "sample_pp_nonia_mps_{seed}.lhe"
+    destination: "{output_dir}/LHE"
+    max_file_size_gb: 10
+
+# LHE preprocessing settings (requirement 2)
+lhe_preprocessing:
+  enabled: true
+  
+  # Two-tier split and shuffle
+  split:
+    tier1_size: 10000  # events per file
+    tier2_size: 1000   # events per subfile
+    shuffle: true
+    
+  # Event mixing settings
+  mixing:
+    enabled: false
+    sources: []  # List of LHE file patterns to mix
+    output_file: "mixed_events.lhe"
+    
+  # Gluon merging
+  gluon_merging:
+    enabled: false
+    merge_distance: 0.4  # Delta R threshold
+
+# Showering settings (requirement 3)
+showering:
+  enabled: true
+  generator: "pythia8"
+  version: "8.3"
+  
+  # For color octet states, keep HepMC
+  color_octet:
+    enabled: false
+    keep_hepmc: true
+    
+  # For phi meson production
+  phi_meson:
+    repeated_showering: false
+    max_attempts: 100
+    
+  pythia_config:
+    tune: "Monash2013"
+    process_string: ""  # Auto-generated from LHE
+
+# CMS simulation workflow (requirement 4)
+simulation:
+  enabled: true
+  cmssw_version: "CMSSW_14_0_0"
+  
+  # Each step configured separately
+  steps:
+    gen:
+      enabled: true
+      config: "configs/cmssw/GEN_cfg.py"
+      keep_output: false  # Delete after SIM
+      
+    sim:
+      enabled: true
+      config: "configs/cmssw/SIM_cfg.py"
+      keep_output: false
+      
+    digi:
+      enabled: true
+      config: "configs/cmssw/DIGI_cfg.py"
+      keep_output: false
+      
+    reco:
+      enabled: true
+      config: "configs/cmssw/RECO_cfg.py"
+      keep_output: false
+      
+    skim:
+      enabled: true
+      config: "configs/cmssw/SKIM_cfg.py"
+      keep_output: true  # MiniAOD
+      
+    ntuple:
+      enabled: true
+      config: "configs/cmssw/Ntuple_cfg.py"
+      keep_output: true
+  
+  # Files to preserve (requirement 4)
+  preserve:
+    - "*.lhe"
+    - "*.hepmc"
+    - "*MiniAOD*.root"
+    - "*Ntuple*.root"
+  
+  # Detector era configurations
+  era_configs:
+    Run2_2018:
+      global_tag: "106X_upgrade2018_realistic_v15"
+      pileup_file: ""
+    Run3_2024:
+      global_tag: "140X_mcRun3_2024_realistic_v2"
+      pileup_file: ""
+
+# Batch submission settings (requirement 5)
+submission:
+  # Primary: HTCondor with DAGman
+  condor:
+    enabled: true
+    dagman: true
+    job_flavour: "tomorrow"
+    request_memory: "15GB"
+    request_cpus: 8
+    request_disk: "8G"
+    accounting_group: ""
+    
+  # Alternative: CRAB
+  crab:
+    enabled: false
+    config_template: "configs/crab/crab_cfg.py.template"
+    site: "T2_CH_CERN"
+    
+# Extension hooks (requirement 5)
+extensions:
+  # Non-prompt J/psi from b quarks
+  nonprompt_jpsi:
+    enabled: false
+    b_quark_production:
+      generator: "pythia8"
+      process: "HardQCD:hardbbbar"
+      
+  # Additional subscatterings
+  additional_scatterings:
+    enabled: false
+    processes: []
